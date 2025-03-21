@@ -13,6 +13,9 @@ import '../common.dart';
 import '../mocks.dart';
 
 class _BoxBaseMock<E> extends BoxBaseImpl<E> with Mock {
+  @override
+  final lazy = false;
+
   _BoxBaseMock(
     super.hive,
     super.name,
@@ -79,7 +82,7 @@ void main() {
 
         final box = _openBoxBaseMock(backend: backend);
         await box.close();
-        expect(() => box.keys, throwsHiveError('closed'));
+        expect(() => box.keys, throwsHiveError(['closed']));
       });
     });
 
@@ -110,9 +113,9 @@ void main() {
 
         final box = _openBoxBaseMock(backend: backend);
         await box.close();
-        expect(() => box.length, throwsHiveError('closed'));
-        expect(() => box.isEmpty, throwsHiveError('closed'));
-        expect(() => box.isNotEmpty, throwsHiveError('closed'));
+        expect(() => box.length, throwsHiveError(['closed']));
+        expect(() => box.isEmpty, throwsHiveError(['closed']));
+        expect(() => box.isNotEmpty, throwsHiveError(['closed']));
       });
     });
 
@@ -132,7 +135,7 @@ void main() {
 
         final box = _openBoxBaseMock(backend: backend);
         await box.close();
-        expect(box.watch, throwsHiveError('closed'));
+        expect(box.watch, throwsHiveError(['closed']));
       });
     });
 
@@ -151,14 +154,13 @@ void main() {
 
         final box = _openBoxBaseMock(backend: backend);
         await box.close();
-        expect(() => box.keyAt(0), throwsHiveError('closed'));
+        expect(() => box.keyAt(0), throwsHiveError(['closed']));
       });
     });
 
     test('.initialize()', () async {
       final backend = MockStorageBackend();
       final box = _openBoxBaseMock(backend: backend);
-      when(() => box.lazy).thenReturn(false);
 
       when(() => backend.initialize(any(), any(), any())).thenAnswer((i) async {
         i.positionalArguments[1].insert(Frame('key1', 1));
@@ -197,7 +199,7 @@ void main() {
 
         final box = _openBoxBaseMock(backend: backend);
         await box.close();
-        expect(() => box.containsKey(0), throwsHiveError('closed'));
+        expect(() => box.containsKey(0), throwsHiveError(['closed']));
       });
     });
 
@@ -313,7 +315,7 @@ void main() {
 
         final box = _openBoxBaseMock(backend: backend);
         await box.close();
-        expect(box.clear, throwsHiveError('closed'));
+        expect(box.clear, throwsHiveError(['closed']));
       });
     });
 
@@ -369,7 +371,7 @@ void main() {
 
         final box = _openBoxBaseMock(backend: backend);
         await box.close();
-        expect(box.compact, throwsHiveError('closed'));
+        expect(box.compact, throwsHiveError(['closed']));
       });
     });
 

@@ -1,4 +1,7 @@
-part of '../hive_flutter.dart';
+import 'dart:async';
+
+import 'package:flutter/widgets.dart';
+import 'package:hive_ce/hive.dart';
 
 /// Signature for a function that builds a widget given a [Box].
 @Deprecated('Use [ValueListenableBuilder] and `box.listenable()` instead')
@@ -47,7 +50,6 @@ class _WatchBoxBuilderState extends State<WatchBoxBuilder> {
   }
 
   @override
-  // ignore: deprecated_member_use
   void didUpdateWidget(WatchBoxBuilder oldWidget) {
     super.didUpdateWidget(oldWidget);
 

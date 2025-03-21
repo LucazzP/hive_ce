@@ -4,6 +4,7 @@ import 'package:hive_ce/hive.dart';
 import 'package:hive_ce/src/backend/js/native/storage_backend_js.dart';
 import 'package:hive_ce/src/backend/js/native/utils.dart';
 import 'package:hive_ce/src/backend/storage_backend.dart';
+import 'package:hive_ce/src/util/debug_utils.dart';
 import 'package:web/web.dart';
 
 /// Opens IndexedDB databases
@@ -24,7 +25,6 @@ class BackendManager implements BackendManagerInterface {
     final objectStoreName = collection == null ? 'box' : name;
 
     final request = indexedDB!.open(databaseName, 1);
-    // ignore: avoid_types_on_closure_parameters
     request.onupgradeneeded = (IDBVersionChangeEvent e) {
       final db = (e.target as IDBOpenDBRequest).result as IDBDatabase;
       if (!db.objectStoreNames.contains(objectStoreName)) {
@@ -36,11 +36,10 @@ class BackendManager implements BackendManagerInterface {
     // in case the objectStore is not contained, re-open the db and
     // update version
     if (!db.objectStoreNames.contains(objectStoreName)) {
-      print(
+      debugPrint(
         'Creating objectStore $objectStoreName in database $databaseName...',
       );
       final request = indexedDB!.open(databaseName, db.version + 1);
-      // ignore: avoid_types_on_closure_parameters
       request.onupgradeneeded = (IDBVersionChangeEvent e) {
         final db = (e.target as IDBOpenDBRequest).result as IDBDatabase;
         if (!db.objectStoreNames.contains(objectStoreName)) {
@@ -50,14 +49,14 @@ class BackendManager implements BackendManagerInterface {
       db = await request.asFuture<IDBDatabase>();
     }
 
-    print('Got object store $objectStoreName in database $databaseName.');
+    debugPrint('Got object store $objectStoreName in database $databaseName.');
 
     return StorageBackendJs(db, cipher, objectStoreName);
   }
 
   @override
   Future<void> deleteBox(String name, String? path, String? collection) async {
-    print('Delete $name // $collection from disk');
+    debugPrint('Delete $name // $collection from disk');
 
     // compatibility for old store format
     final databaseName = collection ?? name;
@@ -68,7 +67,6 @@ class BackendManager implements BackendManagerInterface {
       await indexedDB!.deleteDatabase(databaseName).asFuture();
     } else {
       final request = indexedDB!.open(databaseName, 1);
-      // ignore: avoid_types_on_closure_parameters
       request.onupgradeneeded = (IDBVersionChangeEvent e) {
         final db = (e.target as IDBOpenDBRequest).result as IDBDatabase;
         if (db.objectStoreNames.contains(objectStoreName)) {
@@ -92,7 +90,6 @@ class BackendManager implements BackendManagerInterface {
       var exists = true;
       if (collection == null) {
         final request = indexedDB!.open(databaseName, 1);
-        // ignore: avoid_types_on_closure_parameters
         request.onupgradeneeded = (IDBVersionChangeEvent e) {
           (e.target as IDBOpenDBRequest).transaction!.abort();
           exists = false;
@@ -100,7 +97,6 @@ class BackendManager implements BackendManagerInterface {
         await request.asFuture();
       } else {
         final request = indexedDB!.open(collection, 1);
-        // ignore: avoid_types_on_closure_parameters
         request.onupgradeneeded = (IDBVersionChangeEvent e) {
           final db = (e.target as IDBOpenDBRequest).result as IDBDatabase;
           exists = db.objectStoreNames.contains(objectStoreName);

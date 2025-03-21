@@ -70,6 +70,8 @@ void main() {
 
   group('StorageBackendVm', () {
     test('.path returns path for of open box file', () {
+      // This is a test
+      // ignore: do_not_use_raw_paths
       final file = File('some/path');
       final backend = _getBackend(file: file);
       expect(backend.path, 'some/path');
@@ -210,7 +212,7 @@ void main() {
               MockKeystore(),
               lazy,
             ),
-            throwsHiveError('corrupted'),
+            throwsHiveError(['corrupted']),
           );
         });
       }
@@ -253,7 +255,7 @@ void main() {
         final frame = Frame('test', 123, length: frameBytes.length, offset: 0);
         await expectLater(
           () => backend.readValue(frame),
-          throwsHiveError('corrupted'),
+          throwsHiveError(['corrupted']),
         );
 
         await readRaf.close();
@@ -386,7 +388,7 @@ void main() {
 
         await syncedFile.truncate(await boxFile.length() - 1);
 
-        expect(() => box.compact(), throwsHiveError('unexpected eof'));
+        expect(() => box.compact(), throwsHiveError(['unexpected eof']));
       });
     });*/
 

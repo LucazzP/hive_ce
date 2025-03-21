@@ -1,4 +1,5 @@
 import 'package:hive_ce/hive.dart';
+import 'package:example/named_import.dart' as named;
 
 part 'types.g.dart';
 
@@ -77,4 +78,62 @@ class IterableClass {
 
   @HiveField(3)
   final Set<List<String>> nestedSet;
+}
+
+@HiveType(typeId: 6)
+class ConstructorDefaults {
+  ConstructorDefaults({
+    this.a = 42,
+    this.b = '42',
+    this.c = true,
+    DateTime? d,
+  }) : d = d ?? DateTime.timestamp();
+
+  @HiveField(0)
+  final int a;
+
+  @HiveField(1, defaultValue: '6 * 7')
+  final String b;
+
+  @HiveField(2)
+  final bool c;
+
+  @HiveField(3)
+  final DateTime d;
+}
+
+@HiveType(typeId: 7)
+class NullableTypes {
+  NullableTypes({this.a, this.b, this.c});
+
+  @HiveField(0)
+  final int? a;
+
+  @HiveField(1)
+  final String? b;
+
+  @HiveField(2)
+  final bool? c;
+}
+
+@HiveType(typeId: 8)
+class NamedImports {
+  NamedImports(
+    this.namedImportType,
+    this.namedImportTypeList,
+    this.namedImportTypeNullable,
+    this.namedImportTypeMap,
+  );
+
+  @HiveField(0)
+  final named.NamedImportType namedImportType;
+
+  @HiveField(1)
+  final List<named.NamedImportType> namedImportTypeList;
+
+  @HiveField(2)
+  final named.NamedImportType? namedImportTypeNullable;
+
+  @HiveField(3)
+  final Map<named.NamedImportType, named.NamedImportType> namedImportTypeMap;
 }

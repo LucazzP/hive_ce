@@ -1,3 +1,5 @@
+// This is a test
+// ignore_for_file: prefer_async_await
 @TestOn('vm')
 library;
 
@@ -39,7 +41,7 @@ void main() {
       expect(hive.homePath, 'MYPATH');
 
       expect(
-        hive.findAdapterForValue(DateTime.now())!.adapter,
+        hive.findAdapterForValue(DateTime.timestamp())!.adapter,
         isA<DateTimeWithTimezoneAdapter>(),
       );
       expect(hive.findAdapterForTypeId(16)!.adapter, isA<DateTimeAdapter>());
@@ -63,7 +65,7 @@ void main() {
           await hive.openLazyBox('LAZYBOX');
           await expectLater(
             () => hive.openBox('lazyBox'),
-            throwsHiveError('is already open and of type LazyBox<dynamic>'),
+            throwsHiveError(['is already open and of type LazyBox<dynamic>']),
           );
 
           await hive.close();
@@ -76,7 +78,7 @@ void main() {
             hive.openLazyBox('TESTBOX'),
             expectLater(
               hive.openBox('testbox'),
-              throwsHiveError('is already open and of type LazyBox<dynamic>'),
+              throwsHiveError(['is already open and of type LazyBox<dynamic>']),
             ),
           ]);
         });
@@ -127,7 +129,7 @@ void main() {
           await hive.openBox('LAZYBOX');
           await expectLater(
             () => hive.openLazyBox('lazyBox'),
-            throwsHiveError('is already open and of type Box<dynamic>'),
+            throwsHiveError(['is already open and of type Box<dynamic>']),
           );
 
           await hive.close();
@@ -140,7 +142,7 @@ void main() {
             hive.openBox('LAZYBOX'),
             expectLater(
               hive.openLazyBox('lazyBox'),
-              throwsHiveError('is already open and of type Box<dynamic>'),
+              throwsHiveError(['is already open and of type Box<dynamic>']),
             ),
           ]);
         });
@@ -153,7 +155,7 @@ void main() {
 
         final box = await hive.openBox('TESTBOX');
         expect(hive.box('testBox'), box);
-        expect(() => hive.box('other'), throwsHiveError('not found'));
+        expect(() => hive.box('other'), throwsHiveError(['not found']));
 
         await hive.close();
       });
@@ -164,19 +166,19 @@ void main() {
         await hive.openBox<int>('INTBOX');
         expect(
           () => hive.box('intBox'),
-          throwsHiveError('is already open and of type Box<int>'),
+          throwsHiveError(['is already open and of type Box<int>']),
         );
 
         await hive.openBox('DYNAMICBOX');
         expect(
           () => hive.box<int>('dynamicBox'),
-          throwsHiveError('is already open and of type Box<dynamic>'),
+          throwsHiveError(['is already open and of type Box<dynamic>']),
         );
 
         await hive.openLazyBox('LAZYBOX');
         expect(
           () => hive.box('lazyBox'),
-          throwsHiveError('is already open and of type LazyBox<dynamic>'),
+          throwsHiveError(['is already open and of type LazyBox<dynamic>']),
         );
 
         await hive.close();
@@ -189,7 +191,7 @@ void main() {
 
         final box = await hive.openLazyBox('TESTBOX');
         expect(hive.lazyBox('testBox'), box);
-        expect(() => hive.lazyBox('other'), throwsHiveError('not found'));
+        expect(() => hive.lazyBox('other'), throwsHiveError(['not found']));
 
         await hive.close();
       });
@@ -200,19 +202,19 @@ void main() {
         await hive.openLazyBox<int>('INTBOX');
         expect(
           () => hive.lazyBox('intBox'),
-          throwsHiveError('is already open and of type LazyBox<int>'),
+          throwsHiveError(['is already open and of type LazyBox<int>']),
         );
 
         await hive.openLazyBox('DYNAMICBOX');
         expect(
           () => hive.lazyBox<int>('dynamicBox'),
-          throwsHiveError('is already open and of type LazyBox<dynamic>'),
+          throwsHiveError(['is already open and of type LazyBox<dynamic>']),
         );
 
         await hive.openBox('BOX');
         expect(
           () => hive.lazyBox('box'),
-          throwsHiveError('is already open and of type Box<dynamic>'),
+          throwsHiveError(['is already open and of type Box<dynamic>']),
         );
 
         await hive.close();

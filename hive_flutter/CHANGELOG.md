@@ -1,3 +1,15 @@
+## 2.3.0-pre.1
+
+- Adds `IsolatedHive.initFlutter`
+
+## 2.2.0
+
+- Fixes deprecation of `Color.value`
+
+## 2.1.0
+
+- Does not crash with multiple calls to `initFlutter`
+
 ## 2.0.0
 
 - BREAKING: Registers `ColorAdapter` and `TimeOfDayAdapter` in `Hive.initFlutter`

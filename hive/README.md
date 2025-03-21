@@ -1,49 +1,26 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/hivedb/hive/master/.github/logo_transparent.svg?sanitize=true" width="350px">
+  <img src="https://raw.githubusercontent.com/IO-Design-Team/hive_ce/master/.github/logo_transparent.svg?sanitize=true" width="350px">
 </p>
 <h2 align="center">Fast, Enjoyable & Secure NoSQL Database</h2>
 
-[![GitHub Workflow Status (branch)](https://img.shields.io/github/workflow/status/hivedb/hive/Dart%20CI/nndb?label=tests&labelColor=333940&logo=github)](https://github.com/hivedb/hive/actions) [![Codecov branch](https://img.shields.io/codecov/c/github/hivedb/hive/nndb?labelColor=333940&logo=codecov&logoColor=white)](https://codecov.io/gh/hivedb/hive) [![Pub Version](https://img.shields.io/pub/v/hive?label=pub.dev&labelColor=333940&logo=dart)](https://pub.dev/packages/hive) [![GitHub](https://img.shields.io/github/license/hivedb/hive?color=%23007A88&labelColor=333940&logo=apache)](https://github.com/hivedb/hive/blob/master/LICENSE)
+<p align="center">
+  <a href="https://github.com/IO-Design-Team/hive_ce/actions/workflows/test.yml"><img src="https://github.com/IO-Design-Team/hive_ce/actions/workflows/test.yml/badge.svg" alt="Dart CI"></a>
+  <a href="https://codecov.io/gh/IO-Design-Team/hive_ce"><img src="https://codecov.io/gh/IO-Design-Team/hive_ce/graph/badge.svg?token=ODO2JA4286" alt="codecov"></a>
+  <a href="https://pub.dev/packages/hive_ce"><img src="https://img.shields.io/pub/v/hive_ce?label=pub.dev&labelColor=333940&logo=dart" alt="Pub Version"></a>
+  <a href="https://github.com/IO-Design-Team/hive_ce/blob/master/LICENSE"><img src="https://img.shields.io/badge/License-BSD_3--Clause-007A88.svg?logo=bsd" alt="License"></a>
+</p>
+
+<p align="center">
+  <a href="https://pubstats.dev/packages/hive_ce"><img src="https://pubstats.dev/badges/packages/hive_ce/popularity.svg" alt="PubStats Popularity"></a>
+  <a href="https://pubstats.dev/packages/hive_ce"><img src="https://pubstats.dev/badges/packages/hive_ce/rank.svg" alt="PubStats Rank"></a>
+  <a href="https://pubstats.dev/packages/hive_ce"><img src="https://pubstats.dev/badges/packages/hive_ce/dependents.svg" alt="PubStats Dependents"></a>
+</p>
 
 Hive is a lightweight and blazing fast key-value database written in pure Dart. Inspired by [Bitcask](https://en.wikipedia.org/wiki/Bitcask).
 
-### [Documentation & Samples](https://docs.hivedb.dev/) 📖
+## Tutorial
 
-If you need queries, multi-isolate support or links between objects check out [Isar Database](https://github.com/isar/isar).
-
-## Migrating from Hive
-
-The `hive_ce` package is a drop in replacement for Hive v2. Make the following replacements in your project:
-
-pubspec.yaml
-```yaml
-# old
-dependencies:
-  hive: ^2.0.0
-  hive_flutter: ^1.0.0
-
-dev_dependencies:
-  hive_generator: ^1.0.0
-
-# new
-dependencies:
-  hive_ce: latest
-  hive_ce_flutter: latest
-
-dev_dependencies:
-  hive_ce_generator: latest
-```
-
-Dart files
-```dart
-// old
-import 'package:hive/hive.dart';
-import 'package:hive_flutter/hive_flutter.dart';
-
-// new
-import 'package:hive_ce/hive.dart';
-import 'package:hive_ce_flutter/hive_flutter.dart';
-```
+For a quick tutorial, see [this wonderful post](https://onlyflutter.com/how-to-add-a-local-database-using-hive-in-flutter) by [Tijn van den Eijnde](https://x.com/TijnvdEijnde)
 
 ## Features
 
@@ -54,25 +31,238 @@ import 'package:hive_ce_flutter/hive_flutter.dart';
 - 🎈 **NO** native dependencies
 - 🔋 Batteries included
 
-## Getting Started
+## New features in Hive CE
 
-Check out the [Quick Start](https://docs.hivedb.dev) documentation to get started.
+Hive CE is a spiritual continuation of Hive v2 with the following new features:
+
+- Isolate support through `IsolatedHive`
+- Flutter web WASM support
+- Automatic type adapter generation using the `GenerateAdapters` annotation
+  - No more manually adding annotations to every type and field
+  - Generate adapters for classes outside the current package
+- A `HiveRegistrar` extension that lets you register all your generated adapters in one call
+- Extends the maximum type ID from `223` to `65439`
+- Support for constructor parameter defaults
+- Support for Sets
+- A built in Duration adapter
+- Freezed support
+- Support for generating adapters with classes that use named imports
+
+## Benchmark
+
+This is a comparison of the time to complete a given number of write operations and the resulting database file size:
+
+| Operations | Hive CE Time | IsolatedHive Time | Hive CE Size | Hive v4 Time | Hive v4 Size |
+| ---------- | ------------ | ----------------- | ------------ | ------------ | ------------ |
+| 10         | 0.00 s       | 0.00 s            | 0.00 MB      | 0.00 s       | 1.00 MB      |
+| 100        | 0.00 s       | 0.01 s            | 0.01 MB      | 0.01 s       | 1.00 MB      |
+| 1000       | 0.02 s       | 0.03 s            | 0.11 MB      | 0.06 s       | 1.00 MB      |
+| 10000      | 0.13 s       | 0.25 s            | 1.10 MB      | 0.64 s       | 5.00 MB      |
+| 100000     | 1.40 s       | 2.64 s            | 10.97 MB     | 7.26 s       | 30.00 MB     |
+| 1000000    | 19.94 s      | 41.50 s           | 109.67 MB    | 84.87 s      | 290.00 MB    |
+
+Database size in Hive v4 is directly affected by the length of field names in model classes which is not ideal. Also Hive v4 is much slower than Hive CE for large numbers of operations.
+
+IsolatedHive is slower than Hive, but it is much faster than Hive v4 and you still get the benefit of multiple isolate support.
+
+The benchmark was performed on an M3 Max MacBook Pro. You can [see the benchmark code here](../benchmarks/storage/bin/bench.dart).
+
+## Migration guides
+
+- [Hive v2 to Hive CE](https://github.com/IO-Design-Team/hive_ce/blob/main/hive/MIGRATION.md#v2-to-ce)
+- [Transitive Hive dependencies](https://github.com/IO-Design-Team/hive_ce/blob/main/hive/MIGRATION.md#transitive-hive-dependencies)
+- [Migrating to `GenerateAdapters`](https://github.com/IO-Design-Team/hive_ce/blob/main/hive/MIGRATION.md#generate-adapters)
+- [Add fields to objects](https://github.com/IO-Design-Team/hive_ce/blob/main/hive/MIGRATION.md#add-fields)
 
 ## Usage
 
 You can use Hive just like a map. It is not necessary to await `Futures`.
 
+<!-- embedme readme/usage.dart -->
+
 ```dart
-var box = Hive.box('myBox');
+import 'package:hive_ce/hive.dart';
 
-box.put('name', 'David');
+void example() {
+  final box = Hive.box('myBox');
+  box.put('name', 'David');
+  final name = box.get('name');
+  print('Name: $name');
+}
 
-var name = box.get('name');
-
-print('Name: $name');
 ```
 
-## BoxCollections
+## Guides
+
+<details>
+<summary>IsolatedHive (isolate support)</summary>
+
+`IsolatedHive` allows you to safely use `Hive` in a multi-isolate environment by maintaining its own separate isolate for `Hive` operations
+
+Here are some common examples of multi-isolate scenarios:
+
+- A Flutter desktop app with multiple windows
+- Running background tasks with [flutter_workmanager](https://pub.dev/packages/workmanager), [background_fetch](https://pub.dev/packages/background_fetch), etc
+- Push notification processing
+
+`IsolatedHive` has a very similar API to `Hive`, but there are some key differences:
+
+- The `init` call takes an `isolateNameServer` parameter
+- Most methods are asynchronous due to isolate communication
+- `IsolatedHive` does not support `HiveObject` or `HiveList`
+- Isolate communication does add some overhead. See the benchmarks above.
+
+NOTE: On web, `IsolatedHive` directly calls `Hive` since web does not support isolates
+
+### Usage
+
+<!-- embedme readme/isolated_hive.dart -->
+
+```dart
+import 'package:hive_ce/hive.dart';
+
+import 'stub_ins.dart';
+
+void main() async {
+  await IsolatedHive.init('.', isolateNameServer: StubIns());
+  final box = await IsolatedHive.openBox('box');
+  await box.put('key', 'value');
+  print(await box.get('key')); // reading is async
+}
+
+```
+
+NOTE: It is possible to use `IsolatedHive` without an `IsolateNameServer`, BUT THIS IS UNSAFE. The `IsolateNameServer` is what allows `IsolatedHive` to locate and communicate with a single backend isolate.
+
+Additional notes:
+
+- With Flutter, use `IsolatedHive.initFlutter` from `hive_ce_flutter` to initialize `IsolatedHive` with Flutter's `IsolateNameServer`
+- There is also an `IsolatedHive.registerAdapters` method if you use `hive_ce_generator` to generate adapters
+
+### Example
+
+See an example of a multi-window Flutter app using `IsolatedHive` [here](https://github.com/Rexios80/hive_ce_multiwindow)
+
+</details>
+
+<details>
+<summary>Store objects</summary>
+
+Hive not only supports primitives, lists, and maps but also any Dart object you like. You need to generate type adapters before you can store custom objects.
+
+### Create model classes
+
+<!-- embedme readme/store_objects/person.dart -->
+
+```dart
+import 'package:hive_ce/hive.dart';
+
+class Person extends HiveObject {
+  Person({required this.name, required this.age});
+
+  String name;
+  int age;
+}
+
+```
+
+### Create a `GenerateAdapters` annotation
+
+Usually this is placed in `lib/hive/hive_adapters.dart`
+
+<!-- embedme readme/store_objects/hive_adapters.dart -->
+
+```dart
+import 'package:hive_ce/hive.dart';
+import 'person.dart';
+
+@GenerateAdapters([AdapterSpec<Person>()])
+part 'hive_adapters.g.dart';
+
+```
+
+### Update `pubspec.yaml`
+
+```yaml
+dev_dependencies:
+  build_runner: latest
+  hive_ce_generator: latest
+```
+
+### Run `build_runner`
+
+```bash
+dart pub run build_runner build --delete-conflicting-outputs
+```
+
+This will generate the following:
+
+- TypeAdapters for the specified AdapterSpecs
+- TypeAdapters for all explicitly defined HiveTypes
+- A `hive_adapters.g.dart` file containing all adapters generated from the `GenerateAdapters` annotation
+- A `hive_adapters.g.yaml` file
+- A `hive_registrar.g.dart` file containing an extension method to register all generated adapters
+
+All of the generated files should be checked into version control. These files are explained in more detail below.
+
+### Use the Hive registrar
+
+The Hive Registrar allows you to register all generated TypeAdapters in one call
+
+```dart
+import 'dart:io';
+import 'package:hive_ce/hive.dart';
+import 'package:your_package/hive/hive_registrar.g.dart';
+
+void main() {
+  Hive
+    ..init(Directory.current.path)
+    ..registerAdapters();
+}
+```
+
+### Using HiveObject methods
+
+Extending `HiveObject` is optional but it provides handy methods like `save()` and `delete()`.
+
+<!-- embedme readme/store_objects/hive_object.dart -->
+
+```dart
+import 'package:hive_ce/hive.dart';
+import 'person.dart';
+
+void example() async {
+  final box = await Hive.openBox('myBox');
+
+  final person = Person(name: 'Dave', age: 22);
+  await box.add(person);
+
+  print(box.getAt(0)); // Dave - 22
+
+  person.age = 30;
+  await person.save();
+
+  print(box.getAt(0)); // Dave - 30
+}
+
+```
+
+### About `hive_adapters.g.yaml`
+
+The Hive schema is a generated yaml file that contains the information necessary to incrementally update the generated TypeAdapters as your model classes evolve.
+
+Some migrations may require manual modifications to the Hive schema file. One example is class/field renaming. Without manual intervention, the generator will see both an added and removed class/field. To resolve this, manually rename the class/field in the schema.
+
+### Explicitly defining HiveTypes
+
+The old method of defining HiveTypes is still supported, but should be unnecessary now that Hive CE supports constructor parameter defaults. If you have a use-case that `GenerateAdapters` does not support, please [create an issue on GitHub](https://github.com/IO-Design-Team/hive_ce/issues/new).
+
+Unfortunately it is not possible for `GenerateAdapters` to handle private fields. You can use `@protected` instead if necessary.
+
+</details>
+
+<details>
+<summary>BoxCollection</summary>
 
 `BoxCollections` are a set of boxes which can be similarly used as normal boxes, except of that
 they dramatically improve speed on web. They support opening and closing all boxes of a collection
@@ -84,17 +274,27 @@ transactions on web.
 On `dart:io` platforms, there is no performance gain by BoxCollections or Transactions. Only
 BoxCollections might be useful for some box hierarchy and development experience.
 
+<!-- embedme readme/box_collections.dart -->
+
 ```dart
-// Create a box collection
+import 'package:hive_ce/hive.dart';
+import 'hive_cipher_impl.dart';
+
+void example() async {
+  // Create a box collection
   final collection = await BoxCollection.open(
-    'MyFirstFluffyBox', // Name of your database
-    {'cats', 'dogs'}, // Names of your boxes
-    path: './', // Path where to store your boxes (Only used in Flutter / Dart IO)
-    key: HiveCipher(), // Key to encrypt your boxes (Only used in Flutter / Dart IO)
+    // Name of your database
+    'MyFirstFluffyBox',
+    // Names of your boxes
+    {'cats', 'dogs'},
+    // Path where to store your boxes (Only used in Flutter / Dart IO)
+    path: './',
+    // Key to encrypt your boxes (Only used in Flutter / Dart IO)
+    key: HiveCipherImpl(),
   );
 
   // Open your boxes. Optional: Give it a type.
-  final catsBox = collection.openBox<Map>('cats');
+  final catsBox = await collection.openBox<Map>('cats');
 
   // Put something in
   await catsBox.put('fluffy', {'name': 'Fluffy', 'age': 4});
@@ -133,67 +333,14 @@ BoxCollections might be useful for some box hierarchy and development experience
     boxNames: ['cats'], // By default all boxes become blocked.
     readOnly: false,
   );
-```
-
-## Store objects
-
-Hive not only supports primitives, lists and maps but also any Dart object you like. You need to generate a type adapter before you can store objects.
-
-```dart
-@HiveType(typeId: 0)
-class Person extends HiveObject {
-
-  @HiveField(0)
-  String name;
-
-  @HiveField(1)
-  int age;
 }
+
 ```
 
-Add the following to your pubspec.yaml
-```yaml
-dev_dependencies:
-  build_runner: latest
-  hive_ce_generator: latest
-```
+</details>
 
-And run the following command to generate the type adapter
-```bash
-flutter pub run build_runner build --delete-conflicting-outputs
-```
-
-This will generate all of your `TypeAdapter`s as well as a Hive extension to register them all in one go
-```dart
-import 'package:your_package/hive_registrar.g.dart';
-
-void main() {
-  final path = Directory.current.path;
-  Hive
-    ..init(path)
-    ..registerAdapters();
-}
-```
-
-Extending `HiveObject` is optional but it provides handy methods like `save()` and `delete()`.
-
-```dart
-var box = await Hive.openBox('myBox');
-
-var person = Person()
-  ..name = 'Dave'
-  ..age = 22;
-box.add(person);
-
-print(box.getAt(0)); // Dave - 22
-
-person.age = 30;
-person.save();
-
-print(box.getAt(0)) // Dave - 30
-```
-
-## Hive ❤️ Flutter
+<details>
+<summary>Hive ❤️ Flutter</summary>
 
 Hive was written with Flutter in mind. It is a perfect fit if you need a lightweight datastore for your app. After adding the required dependencies and initializing Hive, you can use Hive in your project:
 
@@ -221,31 +368,4 @@ class SettingsPage extends StatelessWidget {
 
 Boxes are cached and therefore fast enough to be used directly in the `build()` method of Flutter widgets.
 
-## Benchmark
-
-|                                         1000 read iterations                                         |                                    1000 write iterations                                    |
-| :--------------------------------------------------------------------------------------------------: | :-----------------------------------------------------------------------------------------: |
-|         ![](https://raw.githubusercontent.com/hivedb/hive/master/.github/benchmark_read.png)         |    ![](https://raw.githubusercontent.com/hivedb/hive/master/.github/benchmark_write.png)    |
-| SharedPreferences is on par with Hive when it comes to read performance. SQLite performs much worse. | Hive greatly outperforms SQLite and SharedPreferences when it comes to writing or deleting. |
-
-The benchmark was performed on a Oneplus 6T with Android Q. You can [run the benchmark yourself](https://github.com/hivedb/hive_benchmark).
-
-\*Take this benchmark with a grain of salt. It is very hard to compare databases objectively since they were made for different purposes.
-
-### Licence
-
-```
-Copyright 2019 Simon Leier
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-   http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-```
+</details>

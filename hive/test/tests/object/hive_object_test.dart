@@ -37,7 +37,7 @@ void main() {
         obj.init('someKey', box1);
         expect(
           () => obj.init('someKey', box2),
-          throwsHiveError('two different boxes'),
+          throwsHiveError(['two different boxes']),
         );
       });
 
@@ -48,7 +48,7 @@ void main() {
         obj.init('key1', box);
         expect(
           () => obj.init('key2', box),
-          throwsHiveError('two different keys'),
+          throwsHiveError(['two different keys']),
         );
       });
     });
@@ -121,7 +121,7 @@ void main() {
 
       test('throws HiveError if object is not in a box', () async {
         final obj = TestHiveObject();
-        await expectLater(obj.save, throwsHiveError('not in a box'));
+        await expectLater(obj.save, throwsHiveError(['not in a box']));
       });
     });
 
@@ -140,7 +140,7 @@ void main() {
 
       test('throws HiveError if object is not in a box', () async {
         final obj = TestHiveObject();
-        await expectLater(obj.delete, throwsHiveError('not in a box'));
+        await expectLater(obj.delete, throwsHiveError(['not in a box']));
       });
     });
 
@@ -153,7 +153,6 @@ void main() {
       test('returns true if object is in normal box', () {
         final obj = TestHiveObject();
         final box = MockBox();
-        when(() => box.lazy).thenReturn(false);
         obj.init('key', box);
 
         expect(obj.isInBox, true);
@@ -162,8 +161,7 @@ void main() {
       test('returns the result ob box.containsKey() if object is in lazy box',
           () {
         final obj = TestHiveObject();
-        final box = MockBox();
-        when(() => box.lazy).thenReturn(true);
+        final box = MockBox(lazy: true);
         obj.init('key', box);
 
         when(() => box.containsKey('key')).thenReturn(true);

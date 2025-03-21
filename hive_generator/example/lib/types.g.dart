@@ -1,6 +1,6 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
-// ignore_for_file: unnecessary_const, require_trailing_commas, unnecessary_breaks
+// ignore_for_file: unnecessary_const, require_trailing_commas, document_ignores
 
 part of 'types.dart';
 
@@ -165,6 +165,132 @@ class IterableClassAdapter extends TypeAdapter<IterableClass> {
           typeId == other.typeId;
 }
 
+class ConstructorDefaultsAdapter extends TypeAdapter<ConstructorDefaults> {
+  @override
+  final int typeId = 6;
+
+  @override
+  ConstructorDefaults read(BinaryReader reader) {
+    final numOfFields = reader.readByte();
+    final fields = <int, dynamic>{
+      for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
+    };
+    return ConstructorDefaults(
+      a: fields[0] == null ? 42 : (fields[0] as num).toInt(),
+      b: fields[1] == null ? '6 * 7' : fields[1] as String,
+      c: fields[2] == null ? true : fields[2] as bool,
+      d: fields[3] as DateTime?,
+    );
+  }
+
+  @override
+  void write(BinaryWriter writer, ConstructorDefaults obj) {
+    writer
+      ..writeByte(4)
+      ..writeByte(0)
+      ..write(obj.a)
+      ..writeByte(1)
+      ..write(obj.b)
+      ..writeByte(2)
+      ..write(obj.c)
+      ..writeByte(3)
+      ..write(obj.d);
+  }
+
+  @override
+  int get hashCode => typeId.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is ConstructorDefaultsAdapter &&
+          runtimeType == other.runtimeType &&
+          typeId == other.typeId;
+}
+
+class NullableTypesAdapter extends TypeAdapter<NullableTypes> {
+  @override
+  final int typeId = 7;
+
+  @override
+  NullableTypes read(BinaryReader reader) {
+    final numOfFields = reader.readByte();
+    final fields = <int, dynamic>{
+      for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
+    };
+    return NullableTypes(
+      a: (fields[0] as num?)?.toInt(),
+      b: fields[1] as String?,
+      c: fields[2] as bool?,
+    );
+  }
+
+  @override
+  void write(BinaryWriter writer, NullableTypes obj) {
+    writer
+      ..writeByte(3)
+      ..writeByte(0)
+      ..write(obj.a)
+      ..writeByte(1)
+      ..write(obj.b)
+      ..writeByte(2)
+      ..write(obj.c);
+  }
+
+  @override
+  int get hashCode => typeId.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is NullableTypesAdapter &&
+          runtimeType == other.runtimeType &&
+          typeId == other.typeId;
+}
+
+class NamedImportsAdapter extends TypeAdapter<NamedImports> {
+  @override
+  final int typeId = 8;
+
+  @override
+  NamedImports read(BinaryReader reader) {
+    final numOfFields = reader.readByte();
+    final fields = <int, dynamic>{
+      for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
+    };
+    return NamedImports(
+      fields[0] as named.NamedImportType,
+      (fields[1] as List).cast<named.NamedImportType>(),
+      fields[2] as named.NamedImportType?,
+      (fields[3] as Map).cast<named.NamedImportType, named.NamedImportType>(),
+    );
+  }
+
+  @override
+  void write(BinaryWriter writer, NamedImports obj) {
+    writer
+      ..writeByte(4)
+      ..writeByte(0)
+      ..write(obj.namedImportType)
+      ..writeByte(1)
+      ..write(obj.namedImportTypeList)
+      ..writeByte(2)
+      ..write(obj.namedImportTypeNullable)
+      ..writeByte(3)
+      ..write(obj.namedImportTypeMap);
+  }
+
+  @override
+  int get hashCode => typeId.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is NamedImportsAdapter &&
+          runtimeType == other.runtimeType &&
+          typeId == other.typeId;
+}
+
 class Enum1Adapter extends TypeAdapter<Enum1> {
   @override
   final int typeId = 3;
@@ -188,13 +314,10 @@ class Enum1Adapter extends TypeAdapter<Enum1> {
     switch (obj) {
       case Enum1.emumValue1:
         writer.writeByte(0);
-        break;
       case Enum1.emumValue2:
         writer.writeByte(1);
-        break;
       case Enum1.emumValue3:
         writer.writeByte(2);
-        break;
     }
   }
 

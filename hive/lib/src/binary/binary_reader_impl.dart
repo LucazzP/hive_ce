@@ -7,6 +7,7 @@ import 'package:hive_ce/src/crypto/crc32.dart';
 import 'package:hive_ce/src/object/hive_list_impl.dart';
 import 'package:hive_ce/src/registry/type_registry_impl.dart';
 import 'package:hive_ce/src/util/extensions.dart';
+import 'package:meta/meta.dart';
 
 /// Not part of public API
 class BinaryReaderImpl extends BinaryReader {
@@ -242,11 +243,25 @@ class BinaryReaderImpl extends BinaryReader {
     return HiveListImpl.lazy(boxName, keys);
   }
 
+  /// Read a type ID and handle extension
+  @pragma('vm:prefer-inline')
+  @pragma('dart2js:tryInline')
+  @visibleForTesting
+  int readTypeId() {
+    final typeId = readByte();
+    if (typeId == FrameValueType.typeIdExtension) {
+      return readWord();
+    } else {
+      return typeId;
+    }
+  }
+
   /// Not part of public API
   Frame? readFrame({
     HiveCipher? cipher,
     bool lazy = false,
     int frameOffset = 0,
+    bool verbatim = false,
   }) {
     // frame length is stored on 4 bytes
     if (availableBytes < 4) return null;
@@ -277,6 +292,8 @@ class BinaryReaderImpl extends BinaryReader {
       frame = Frame.deleted(key);
     } else if (lazy) {
       frame = Frame.lazy(key);
+    } else if (verbatim) {
+      frame = Frame(key, viewBytes(availableBytes));
     } else if (cipher == null) {
       frame = Frame(key, read());
     } else {
@@ -296,7 +313,7 @@ class BinaryReaderImpl extends BinaryReader {
 
   @override
   dynamic read([int? typeId]) {
-    typeId ??= readByte();
+    typeId ??= readTypeId();
     switch (typeId) {
       case FrameValueType.nullT:
         return null;

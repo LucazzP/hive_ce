@@ -1,5 +1,3 @@
-library hive.test.mocks;
-
 import 'dart:io';
 
 import 'package:hive_ce/hive.dart';
@@ -13,7 +11,12 @@ import 'package:mocktail/mocktail.dart';
 
 // Mocks
 
-class MockBox<E> extends Mock implements Box<E> {}
+class MockBox<E> extends Mock implements Box<E> {
+  @override
+  final bool lazy;
+
+  MockBox({this.lazy = false});
+}
 
 class MockChangeNotifier extends Mock implements ChangeNotifier {}
 
@@ -33,7 +36,10 @@ class MockBinaryReader extends Mock implements BinaryReader {}
 
 class MockBinaryWriter extends Mock implements BinaryWriter {}
 
-class MockFile extends Mock implements File {}
+class MockFile extends Mock implements File {
+  @override
+  bool existsSync() => false;
+}
 
 class MockFrameIoHelper extends Mock implements FrameIoHelper {}
 

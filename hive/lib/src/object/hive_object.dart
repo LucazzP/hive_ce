@@ -1,5 +1,3 @@
-library hive_object_internal;
-
 import 'package:hive_ce/hive.dart';
 import 'package:hive_ce/src/object/hive_list_impl.dart';
 import 'package:meta/meta.dart';
@@ -37,9 +35,13 @@ mixin HiveObjectMixin {
   }
 
   /// Deletes this object from the box it is stored in.
-  Future<void> delete() {
+  Future<void> delete() async {
     _requireInitialized();
-    return _box!.delete(_key);
+    await _box!.delete(_key);
+    if (_box?.lazy == true) {
+      // Lazy boxes won't automatically dispose their HiveObjects
+      dispose();
+    }
   }
 
   /// Returns whether this object is currently stored in a box.

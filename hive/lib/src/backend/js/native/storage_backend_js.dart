@@ -11,12 +11,29 @@ import 'package:hive_ce/src/binary/binary_writer_impl.dart';
 import 'package:hive_ce/src/binary/frame.dart';
 import 'package:hive_ce/src/box/keystore.dart';
 import 'package:hive_ce/src/registry/type_registry_impl.dart';
+import 'package:hive_ce/src/util/debug_utils.dart';
 import 'package:meta/meta.dart';
 import 'package:web/web.dart';
 
 /// Handles all IndexedDB related tasks
 class StorageBackendJs extends StorageBackend {
   static const _bytePrefix = [0x90, 0xA9];
+
+  /// If this is a WASM environment
+  @visibleForTesting
+  static const isWasm = bool.fromEnvironment('dart.tool.dart2wasm');
+
+  /// Warning message printed when writing `int` values in a WASM environment
+  @visibleForTesting
+  static const wasmIntWarning =
+      'WARNING: You are writing a type of `int` or `List<int>` in a WASM '
+      'environment. This value will read as a `double` or `List<double>` '
+      'on subsequent app launches and need manually casted back to the correct '
+      'type. Ensure you are doing one of the following:\n'
+      ' - (box.get(key) as num).toInt()\n'
+      ' - (box.get(key) as List).cast<num>().map((e) => e.toInt()).toList()\n\n'
+      'Also consider using TypeAdapters since they automatically handle this.';
+
   final IDBDatabase _db;
   final HiveCipher? _cipher;
 
@@ -62,6 +79,13 @@ class StorageBackendJs extends StorageBackend {
           value is List<num> ||
           value is List<bool> ||
           value is List<String>) {
+        if (kDebugMode) {
+          final isIntType = value is int || value is List<int>;
+          if (isIntType && isWasm) {
+            debugPrint(wasmIntWarning);
+          }
+        }
+
         return value.jsify();
       }
     }
@@ -148,8 +172,9 @@ class StorageBackendJs extends StorageBackend {
   Future<int> initialize(
     TypeRegistry registry,
     Keystore keystore,
-    bool lazy,
-  ) async {
+    bool lazy, {
+    bool verbatimFrames = false,
+  }) async {
     _registry = registry;
     final keys = await getKeys();
     if (!lazy) {
@@ -169,13 +194,13 @@ class StorageBackendJs extends StorageBackend {
   }
 
   @override
-  Future<Object?> readValue(Frame frame) async {
+  Future<Object?> readValue(Frame frame, {bool verbatim = false}) async {
     final value = await getStore(false).get(frame.key.jsify()).asFuture();
     return decodeValue(value);
   }
 
   @override
-  Future<void> writeFrames(List<Frame> frames) async {
+  Future<void> writeFrames(List<Frame> frames, {bool verbatim = false}) async {
     final store = getStore(true);
     for (final frame in frames) {
       if (frame.deleted) {
@@ -206,14 +231,13 @@ class StorageBackendJs extends StorageBackend {
   Future<void> deleteFromDisk() async {
     final indexDB = window.self.indexedDB;
 
-    print('Delete ${_db.name} // $objectStoreName from disk');
+    debugPrint('Delete ${_db.name} // $objectStoreName from disk');
 
     // directly deleting the entire DB if a non-collection Box
     if (_db.objectStoreNames.length == 1) {
       await indexDB.deleteDatabase(_db.name).asFuture();
     } else {
       final request = indexDB.open(_db.name, 1);
-      // ignore: avoid_types_on_closure_parameters
       request.onupgradeneeded = (IDBVersionChangeEvent e) {
         final db = (e.target as IDBOpenDBRequest).result as IDBDatabase;
         if (db.objectStoreNames.contains(objectStoreName)) {
