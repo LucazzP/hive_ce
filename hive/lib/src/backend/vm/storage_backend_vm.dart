@@ -195,10 +195,21 @@ RECOMMENDED ACTIONS:
             writeOffset = await writeRaf.length();
 
             // try again
-            return writeFrames(frames, verbatim: verbatim, tryToReopen: false);
+            try {
+              await writeRaf.writeFrom(writer.toBytes());
+            } catch (e) {
+              await writeRaf.setPosition(writeOffset);
+              rethrow;
+            }
+
+            for (final frame in frames) {
+              frame.offset = writeOffset;
+              writeOffset += frame.length!;
+            }
           }
+        } else {
+          await writeRaf.setPosition(writeOffset);
         }
-        await writeRaf.setPosition(writeOffset);
         rethrow;
       }
 
