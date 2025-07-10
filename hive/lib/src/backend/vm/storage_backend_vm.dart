@@ -263,6 +263,7 @@ RECOMMENDED ACTIONS:
 
       await readRaf.close();
       await writeRaf.close();
+      await _file.delete();
       await compactFile.rename(path);
       await open();
 
