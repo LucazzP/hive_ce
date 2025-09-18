@@ -6,6 +6,8 @@ class ReadWriteSync {
 
   Future _writeTask = Future.value();
 
+  static const _timeout = Duration(seconds: 30);
+
   /// Run operation with read lock
   Future<T> syncRead<T>(Future<T> Function() task) async {
     final previousTask = _readTask;
@@ -14,7 +16,10 @@ class ReadWriteSync {
     _readTask = completer.future;
 
     await previousTask;
-    return task().whenComplete(completer.complete);
+    final resultFuture = task().timeout(_timeout);
+    // ignore: prefer_async_await
+    resultFuture.then(completer.complete).catchError(completer.completeError).ignore();
+    return resultFuture;
   }
 
   /// Run operation with write lock
@@ -25,7 +30,10 @@ class ReadWriteSync {
     _writeTask = completer.future;
 
     await previousTask;
-    return task().whenComplete(completer.complete);
+    final resultFuture = task().timeout(_timeout);
+    // ignore: prefer_async_await
+    resultFuture.then(completer.complete).catchError(completer.completeError).ignore();
+    return resultFuture;
   }
 
   /// Run operation with read and write lock
@@ -40,6 +48,9 @@ class ReadWriteSync {
 
     await previousReadTask;
     await previousWriteTask;
-    return task().whenComplete(completer.complete);
+    final resultFuture = task().timeout(_timeout);
+    // ignore: prefer_async_await
+    resultFuture.then(completer.complete).catchError(completer.completeError).ignore();
+    return resultFuture;
   }
 }

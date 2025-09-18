@@ -158,8 +158,7 @@ RECOMMENDED ACTIONS:
       final bytes = await readRaf.read(frame.length!);
 
       final reader = BinaryReaderImpl(bytes, registry);
-      final readFrame =
-          reader.readFrame(cipher: _cipher, lazy: false, verbatim: verbatim);
+      final readFrame = reader.readFrame(cipher: _cipher, lazy: false, verbatim: verbatim);
 
       if (readFrame == null) {
         throw HiveError(
@@ -172,19 +171,45 @@ RECOMMENDED ACTIONS:
   }
 
   @override
-  Future<void> writeFrames(List<Frame> frames, {bool verbatim = false}) {
+  Future<void> writeFrames(List<Frame> frames, {bool verbatim = false, bool tryToReopen = true}) {
     return _sync.syncWrite(() async {
       final writer = BinaryWriterImpl(registry);
 
       for (final frame in frames) {
-        frame.length =
-            writer.writeFrame(frame, cipher: _cipher, verbatim: verbatim);
+        frame.length = writer.writeFrame(frame, cipher: _cipher, verbatim: verbatim);
       }
 
       try {
         await writeRaf.writeFrom(writer.toBytes());
       } catch (e) {
-        await writeRaf.setPosition(writeOffset);
+        if (e is FileSystemException) {
+          final fileIsClosed = e.osError?.errorCode == 32 || e.message.contains('closed');
+          if (fileIsClosed && tryToReopen) {
+            // The file is closed, so we need to reopen it
+            try {
+              await writeRaf.close();
+            } catch (e) {
+              // ignore
+            }
+            writeRaf = await _file.open(mode: FileMode.writeOnlyAppend);
+            writeOffset = await writeRaf.length();
+
+            // try again
+            try {
+              await writeRaf.writeFrom(writer.toBytes());
+            } catch (e) {
+              await writeRaf.setPosition(writeOffset);
+              rethrow;
+            }
+
+            for (final frame in frames) {
+              frame.offset = writeOffset;
+              writeOffset += frame.length!;
+            }
+          }
+        } else {
+          await writeRaf.setPosition(writeOffset);
+        }
         rethrow;
       }
 
