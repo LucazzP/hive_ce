@@ -14,8 +14,22 @@ import 'package:yaml/yaml.dart';
 /// Builder that generates Hive adapters from a GenerateAdapters annotation
 class AdaptersGenerator extends GeneratorForAnnotation<GenerateAdapters> {
   @override
+  Future<String> generateForAnnotatedDirective(
+    ElementDirective directive,
+    ConstantReader annotation,
+    BuildStep buildStep,
+  ) =>
+      _generate(annotation, buildStep);
+
+  @override
   Future<String> generateForAnnotatedElement(
     Element element,
+    ConstantReader annotation,
+    BuildStep buildStep,
+  ) =>
+      _generate(annotation, buildStep);
+
+  Future<String> _generate(
     ConstantReader annotation,
     BuildStep buildStep,
   ) async {
@@ -50,13 +64,25 @@ class AdaptersGenerator extends GeneratorForAnnotation<GenerateAdapters> {
         )
         .toList();
 
-    var nextTypeId = schema.nextTypeId;
+    var typeId = schema.nextTypeId - 1;
+    int generateTypeId() {
+      do {
+        typeId++;
+      } while (revived.reservedTypeIds.contains(typeId));
+      return typeId;
+    }
+
     final newTypes = <String, HiveSchemaType>{};
     final content = StringBuffer();
     for (final spec in existingSpecs + newSpecs) {
-      final typeKey = spec.type.getDisplayString();
+      final typeKey = spec.type.element!.displayName;
+
       final schemaType = schema.types[typeKey] ??
-          HiveSchemaType(typeId: nextTypeId++, nextIndex: 0, fields: {});
+          HiveSchemaType(
+            typeId: generateTypeId(),
+            nextIndex: 0,
+            fields: {},
+          );
       final result = TypeAdapterGenerator.generateTypeAdapter(
         element: spec.type.element!,
         library: library,
@@ -73,7 +99,7 @@ class AdaptersGenerator extends GeneratorForAnnotation<GenerateAdapters> {
     // Not the safest thing to do, but there doesn't seem to be a better way
     buildStep.forceWriteAsString(
       schemaAsset,
-      HiveSchema(nextTypeId: nextTypeId, types: newTypes).toString(),
+      writeSchema(HiveSchema(nextTypeId: typeId + 1, types: newTypes)),
     );
 
     return content.toString();

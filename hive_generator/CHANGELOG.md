@@ -1,6 +1,35 @@
-## 1.9.0-pre.1
+## 1.9.5
+
+- Supports `analyzer: 8.0.0`
+- Supports `build: 4.0.0`
+- Supports `source_gen: 4.0.0`
+
+## 1.9.4
+
+- Fixes `TypeChecker.fromRuntime` deprecations
+
+## 1.9.3
+
+- Supports `build: 3.0.0` and `source_gen: 3.0.0`
+
+## 1.9.2
+
+- Ignores analyzer deprecations
+- Fixes read method generation for classes with non-constructor fields
+- Fixes adapter name generation for generic types
+
+## 1.9.1
+
+- Fixes issue with `hive_registrar.g.dart` getting deleted (by [@Komodo5197](https://github.com/Komodo5197) in [#130](https://github.com/IO-Design-Team/hive_ce/pull/130))
+
+## 1.9.0
 
 - Generates `IsolatedHiveRegistrar` extension for `IsolatedHiveInterface`
+- Fixes generated read method for empty classes (by [@esuljic](https://github.com/esuljic) in [#92](https://github.com/IO-Design-Team/hive_ce/pull/92))
+- Adds support for `@Default` annotation from `freezed`
+- Fixes generation for `Iterable` fields
+- Removes type annotation from generated `typeId` field
+- Adds support for `reservedTypeIds` in `GenerateAdapters` annotation
 
 ## 1.8.2
 

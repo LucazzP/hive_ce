@@ -1,6 +1,15 @@
-## 2.3.0-pre.1
+## 2.3.2
+
+- Fixes an issue with the `ColorAdapter` reading legacy color data
+
+## 2.3.1
+
+- Fixes web compatibility check
+
+## 2.3.0
 
 - Adds `IsolatedHive.initFlutter`
+- Allows changing the type ids of `ColorAdapter` and `TimeOfDayAdapter`
 
 ## 2.2.0
 

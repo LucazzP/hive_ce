@@ -14,29 +14,31 @@ import 'package:hive_ce_generator/src/helper/type_helper.dart';
 /// TODO: Document this!
 class ClassAdapterBuilder extends AdapterBuilder {
   /// TODO: Document this!
-  ClassAdapterBuilder(
+  const ClassAdapterBuilder(
     super.cls,
     super.getters,
     super.setters,
   );
 
   /// [TypeChecker] for [HiveList].
-  final hiveListChecker = const TypeChecker.fromRuntime(HiveList);
-
-  /// [TypeChecker] for [List].
-  final listChecker = const TypeChecker.fromRuntime(List);
+  final hiveListChecker =
+      const TypeChecker.typeNamed(HiveList, inPackage: 'hive_ce');
 
   /// [TypeChecker] for [Map].
-  final mapChecker = const TypeChecker.fromRuntime(Map);
+  final mapChecker =
+      const TypeChecker.typeNamed(Map, inPackage: 'core', inSdk: true);
 
   /// [TypeChecker] for [Set].
-  final setChecker = const TypeChecker.fromRuntime(Set);
+  final setChecker =
+      const TypeChecker.typeNamed(Set, inPackage: 'core', inSdk: true);
 
   /// [TypeChecker] for [Iterable].
-  final iterableChecker = const TypeChecker.fromRuntime(Iterable);
+  final iterableChecker =
+      const TypeChecker.typeNamed(Iterable, inPackage: 'core', inSdk: true);
 
   /// [TypeChecker] for [Uint8List].
-  final uint8ListChecker = const TypeChecker.fromRuntime(Uint8List);
+  final uint8ListChecker = const TypeChecker.typeNamed(Uint8List,
+      inPackage: 'typed_data', inSdk: true);
 
   @override
   String buildRead() {
@@ -46,8 +48,11 @@ class ClassAdapterBuilder extends AdapterBuilder {
     final fields = setters.toList();
 
     // Empty classes
-    if (constr.parameters.isEmpty && fields.isEmpty) {
-      return 'return ${cls.name}();';
+    if (constr.formalParameters.isEmpty && fields.isEmpty) {
+      return '''
+    reader.readByte();
+    return ${cls.displayName}();
+    ''';
     }
 
     final code = StringBuffer();
@@ -57,16 +62,16 @@ class ClassAdapterBuilder extends AdapterBuilder {
       for (int i = 0; i < numOfFields; i++)
         reader.readByte(): reader.read(),
     };
-    return ${cls.name}(
+    return ${cls.displayName}(
     ''');
 
-    for (final param in constr.parameters) {
-      var field = fields.firstWhereOrNull((it) => it.name == param.name);
+    for (final param in constr.formalParameters) {
+      var field = fields.firstWhereOrNull((it) => it.name == param.displayName);
       // Final fields
-      field ??= getters.firstWhereOrNull((it) => it.name == param.name);
+      field ??= getters.firstWhereOrNull((it) => it.name == param.displayName);
       if (field != null) {
         if (param.isNamed) {
-          code.write('${param.name}: ');
+          code.write('${param.displayName}: ');
         }
         code.write(_value(param.type, field));
         code.writeln(',');
@@ -113,10 +118,11 @@ class ClassAdapterBuilder extends AdapterBuilder {
     final suffix = _suffixFromType(type);
     if (hiveListChecker.isAssignableFromType(type)) {
       return '($variable as HiveList$suffix)$suffix.castHiveList()';
-    } else if (listChecker.isAssignableFromType(type) && !isUint8List(type)) {
-      return '($variable as List$suffix)${_castIterable(type)}';
     } else if (setChecker.isAssignableFromType(type)) {
       return '($variable as Set$suffix)${_castIterable(type)}';
+    } else if (iterableChecker.isAssignableFromType(type) &&
+        !isUint8List(type)) {
+      return '($variable as List$suffix)${_castIterable(type)}';
     } else if (mapChecker.isAssignableFromType(type)) {
       return '($variable as Map$suffix)${_castMap(type)}';
     } else if (type.isDartCoreInt) {
@@ -145,12 +151,12 @@ class ClassAdapterBuilder extends AdapterBuilder {
     final suffix = _accessorSuffixFromType(type);
     if (isMapOrIterable(arg) && !isUint8List(arg)) {
       var cast = '';
-      // Using assignable because List? is not exactly List
-      if (listChecker.isAssignableFromType(type)) {
-        cast = '.toList()';
-        // Using assignable because Set? is not exactly Set
-      } else if (setChecker.isAssignableFromType(type)) {
+      // Using assignable because Set? is not exactly Set
+      if (setChecker.isAssignableFromType(type)) {
         cast = '.toSet()';
+        // Using assignable because Iterable? is not exactly Iterable
+      } else if (iterableChecker.isAssignableFromType(type)) {
+        cast = '.toList()';
       }
 
       return '$suffix.map((e) => ${_cast(arg, 'e')})$cast';
@@ -220,13 +226,16 @@ extension on DartType {
     final definingLibrary = element.library;
     if (definingLibrary == currentLibrary) return getDisplayString();
 
-    for (final import in currentLibrary.units.expand((e) => e.libraryImports)) {
-      for (final MapEntry(:key, :value)
-          in import.namespace.definedNames.entries) {
-        if (value == element) {
-          return '$key${_suffixFromType(this)}';
-        }
-      }
+    final prefix = currentLibrary.fragments
+        .expand((e) => e.libraryImports)
+        .firstWhereOrNull(
+            (e) => e.namespace.definedNames2.values.contains(element))
+        ?.prefix
+        ?.element
+        .displayName;
+
+    if (prefix != null) {
+      return '$prefix.${getDisplayString()}';
     }
 
     return getDisplayString();

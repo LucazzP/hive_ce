@@ -5,6 +5,7 @@ import 'package:hive_ce/src/binary/frame.dart';
 import 'package:meta/meta.dart';
 
 /// Not part of public API
+@immutable
 class ChangeNotifier {
   final StreamController<BoxEvent> _streamController;
 
@@ -13,11 +14,17 @@ class ChangeNotifier {
 
   /// Not part of public API
   @visibleForTesting
-  ChangeNotifier.debug(this._streamController);
+  const ChangeNotifier.debug(this._streamController);
 
   /// Not part of public API
-  void notify(Frame frame) {
-    _streamController.add(BoxEvent(frame.key, frame.value, frame.deleted));
+  void notify(Frame frame, {Object? deletedValue}) {
+    _streamController.add(
+      BoxEvent(
+        frame.key,
+        frame.deleted ? deletedValue : frame.value,
+        frame.deleted,
+      ),
+    );
   }
 
   /// Not part of public API

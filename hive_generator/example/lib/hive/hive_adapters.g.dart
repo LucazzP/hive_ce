@@ -10,7 +10,7 @@ part of 'hive_adapters.dart';
 
 class ClassSpec1Adapter extends TypeAdapter<ClassSpec1> {
   @override
-  final int typeId = 50;
+  final typeId = 50;
 
   @override
   ClassSpec1 read(BinaryReader reader) {
@@ -47,7 +47,7 @@ class ClassSpec1Adapter extends TypeAdapter<ClassSpec1> {
 
 class ClassSpec2Adapter extends TypeAdapter<ClassSpec2> {
   @override
-  final int typeId = 51;
+  final typeId = 51;
 
   @override
   ClassSpec2 read(BinaryReader reader) {
@@ -58,17 +58,26 @@ class ClassSpec2Adapter extends TypeAdapter<ClassSpec2> {
     return ClassSpec2(
       fields[0] as String,
       fields[1] as String,
+      (fields[2] as List).cast<String>(),
+      (fields[3] as Set).cast<String>(),
+      (fields[4] as List).cast<String>(),
     );
   }
 
   @override
   void write(BinaryWriter writer, ClassSpec2 obj) {
     writer
-      ..writeByte(2)
+      ..writeByte(5)
       ..writeByte(0)
       ..write(obj.value)
       ..writeByte(1)
-      ..write(obj.value2);
+      ..write(obj.value2)
+      ..writeByte(2)
+      ..write(obj.iterable)
+      ..writeByte(3)
+      ..write(obj.set)
+      ..writeByte(4)
+      ..write(obj.list);
   }
 
   @override
@@ -84,7 +93,7 @@ class ClassSpec2Adapter extends TypeAdapter<ClassSpec2> {
 
 class EnumSpecAdapter extends TypeAdapter<EnumSpec> {
   @override
-  final int typeId = 52;
+  final typeId = 52;
 
   @override
   EnumSpec read(BinaryReader reader) {
@@ -115,6 +124,64 @@ class EnumSpecAdapter extends TypeAdapter<EnumSpec> {
   bool operator ==(Object other) =>
       identical(this, other) ||
       other is EnumSpecAdapter &&
+          runtimeType == other.runtimeType &&
+          typeId == other.typeId;
+}
+
+class ClassSpec3Adapter extends TypeAdapter<ClassSpec3> {
+  @override
+  final typeId = 53;
+
+  @override
+  ClassSpec3 read(BinaryReader reader) {
+    final numOfFields = reader.readByte();
+    final fields = <int, dynamic>{
+      for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
+    };
+    return ClassSpec3()..value = (fields[0] as num?)?.toInt();
+  }
+
+  @override
+  void write(BinaryWriter writer, ClassSpec3 obj) {
+    writer
+      ..writeByte(1)
+      ..writeByte(0)
+      ..write(obj.value);
+  }
+
+  @override
+  int get hashCode => typeId.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is ClassSpec3Adapter &&
+          runtimeType == other.runtimeType &&
+          typeId == other.typeId;
+}
+
+class ClassSpec4Adapter extends TypeAdapter<ClassSpec4> {
+  @override
+  final typeId = 54;
+
+  @override
+  ClassSpec4 read(BinaryReader reader) {
+    reader.readByte();
+    return ClassSpec4();
+  }
+
+  @override
+  void write(BinaryWriter writer, ClassSpec4 obj) {
+    writer.writeByte(0);
+  }
+
+  @override
+  int get hashCode => typeId.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is ClassSpec4Adapter &&
           runtimeType == other.runtimeType &&
           typeId == other.typeId;
 }

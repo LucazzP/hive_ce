@@ -12,6 +12,7 @@ import 'package:meta/meta.dart';
 ///
 /// Needed to codegen the TypeRegistry mock
 @visibleForTesting
+@immutable
 class ResolvedAdapter<T> {
   /// The [TypeAdapter] for type [T]
   final TypeAdapter adapter;
@@ -20,7 +21,7 @@ class ResolvedAdapter<T> {
   final int typeId;
 
   /// A wrapper for a [TypeAdapter] and its [typeId]
-  ResolvedAdapter(this.adapter, this.typeId);
+  const ResolvedAdapter(this.adapter, this.typeId);
 
   /// Checks if the given value's [runtimeType] is of type [T]
   bool matchesRuntimeType(dynamic value) => value.runtimeType == T;
@@ -184,21 +185,22 @@ class TypeRegistryImpl implements TypeRegistry {
         }
       }
 
-      final adapterForSameType = findAdapterForType<T>()?.adapter;
-      if (adapterForSameType != null && !override) {
-        final adapterType = adapter.runtimeType;
+      final existingTypeAdapter = findAdapterForType<T>()?.adapter;
+      if (existingTypeAdapter != null && !override) {
         final adapterTypeId = adapter.typeId;
-        final existingAdapterType = adapterForSameType.runtimeType;
-        final existingAdapterTypeId = adapterForSameType.typeId;
+        final existingAdapterTypeId = existingTypeAdapter.typeId;
 
         if (adapterTypeId != existingAdapterTypeId) {
+          final adapterTypeString =
+              '${adapter.runtimeType} (typeId $adapterTypeId)';
+          final existingAdapterTypeString =
+              '${existingTypeAdapter.runtimeType} (typeId $existingAdapterTypeId)';
           debugPrint(
-            'WARNING: You are trying to register $adapterType '
-            '(typeId $adapterTypeId) for type $T but there is already a '
-            'TypeAdapter for this type: $existingAdapterType '
-            '(typeId $existingAdapterTypeId). Note that $adapterType will have '
-            'no effect as $existingAdapterType takes precedence. If you want to '
-            'override the existing adapter, the typeIds must match.',
+            'WARNING: You are trying to register $adapterTypeString for type '
+            '$T but there is already a TypeAdapter for this type: '
+            '$existingAdapterTypeString. Note that $adapterTypeString will '
+            'have no effect as $existingAdapterTypeString takes precedence. If '
+            'you want to override the existing adapter, the typeIds must match.',
           );
         }
       }
@@ -224,7 +226,6 @@ class TypeRegistryImpl implements TypeRegistry {
   }
 
   /// Resolve the real type ID for the given [typeId]
-  @visibleForTesting
   static int calculateTypeId(int typeId, {required bool internal}) {
     if (internal) {
       assert(typeId >= 0 && typeId <= maxInternalTypeId);
@@ -246,5 +247,16 @@ class TypeRegistryImpl implements TypeRegistry {
         return typeId + reservedTypeIds;
       }
     }
+  }
+
+  /// If the given raw [typeId] is internal
+  static bool isInternalTypeId(int typeId) {
+    final isInternal = typeId >= 0 && typeId < reservedTypeIds;
+
+    final firstExtendedInternalTypeId = maxTypeId + 1;
+    final isExtendedInternal = typeId >= firstExtendedInternalTypeId &&
+        typeId < firstExtendedInternalTypeId + reservedExtendedTypeIds;
+
+    return isInternal || isExtendedInternal;
   }
 }

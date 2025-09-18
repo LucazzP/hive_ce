@@ -20,10 +20,10 @@ import 'integration.dart';
 /// Exists to silence the warning about not passing an INS
 class StubIns extends IsolateNameServer {
   @override
-  SendPort? lookupPortByName(String name) => null;
+  dynamic lookupPortByName(String name) => null;
 
   @override
-  bool registerPortWithName(SendPort port, String name) => true;
+  bool registerPortWithName(dynamic port, String name) => true;
 
   @override
   bool removePortNameMapping(String name) => true;
@@ -33,10 +33,10 @@ class TestIns extends IsolateNameServer {
   final _ports = <String, SendPort>{};
 
   @override
-  SendPort? lookupPortByName(String name) => _ports[name];
+  dynamic lookupPortByName(String name) => _ports[name];
 
   @override
-  bool registerPortWithName(SendPort port, String name) {
+  bool registerPortWithName(dynamic port, String name) {
     _ports[name] = port;
     return true;
   }
@@ -50,7 +50,7 @@ class TestIns extends IsolateNameServer {
 
 final isolateNameRegex = RegExp(r'\(current isolate: .+?\)');
 
-void main() async {
+void main() {
   Future<void> runIsolate({
     required IsolateNameServer ins,
     required String path,
@@ -143,7 +143,7 @@ void main() async {
           final hive = IsolatedHiveImpl();
           addTearDown(hive.close);
 
-          (hive as HiveIsolate).entryPoint = (send) async {
+          (hive as HiveIsolate).entryPoint = (send) {
             final connection = setupIsolate(send);
             final hiveChannel = IsolateMethodChannel('hive', connection);
             final testChannel = IsolateMethodChannel('test', connection);
@@ -173,31 +173,21 @@ void main() async {
           expect(safeOutput, isEmpty);
         });
 
-        test('lock file exists', () async {
+        test('unmatched isolation', () async {
           final dir = await getTempDir();
           final path = dir.path;
-          await Isolate.run(() async {
-            silenceOutput(() => Hive.init(path));
-            await Hive.openBox('test');
-          });
 
+          await IsolatedHive.init(path, isolateNameServer: StubIns());
           Hive.init(path);
+
+          await IsolatedHive.openBox('test');
           final output =
               await captureOutput(() => Hive.openBox('test')).toList();
 
           expect(
             output,
-            contains(StorageBackendVm.lockFileExistsWarning('test.lock')),
+            contains(StorageBackendVm.unmatchedIsolationWarning),
           );
-        });
-
-        test('lock file does not exist', () async {
-          final dir = await getTempDir();
-          final path = dir.path;
-          Hive.init(path);
-          final output =
-              await captureOutput(() => Hive.openBox('test')).toList();
-          expect(output, isEmpty);
         });
       });
 

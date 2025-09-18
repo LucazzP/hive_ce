@@ -3,43 +3,46 @@ import 'dart:isolate';
 import 'dart:typed_data';
 
 import 'package:hive_ce/hive.dart';
+import 'package:hive_ce/src/connect/hive_connect.dart';
 import 'package:hive_ce/src/isolate/handler/isolate_entry_point.dart';
 import 'package:hive_ce/src/isolate/isolated_box_impl/isolated_box_impl_vm.dart';
 import 'package:hive_ce/src/isolate/isolated_hive_impl/hive_isolate.dart';
+import 'package:hive_ce/src/isolate/isolated_hive_impl/hive_isolate_name.dart';
 import 'package:hive_ce/src/registry/type_registry_impl.dart';
 import 'package:hive_ce/src/util/debug_utils.dart';
+import 'package:hive_ce/src/util/type_utils.dart';
 import 'package:isolate_channel/isolate_channel.dart';
 
 /// Handles Hive operations in an isolate
 class IsolatedHiveImpl extends TypeRegistryImpl
     implements IsolatedHiveInterface, HiveIsolate {
   late final IsolateNameServer? _isolateNameServer;
+
+  IsolateConnection? _connection;
+
   late final IsolateMethodChannel _hiveChannel;
   late final IsolateMethodChannel _boxChannel;
-
-  late final IsolateConnection _connection;
 
   final _boxes = <String, IsolatedBoxBaseImpl>{};
   final _openingBoxes = <String, Future>{};
 
   @override
-  IsolateConnection get connection => _connection;
+  IsolateConnection get connection => _connection!;
 
   late Future<IsolateConnection> Function() _spawnHiveIsolate =
       () => spawnIsolate(
             isolateEntryPoint,
-            debugName: HiveIsolate.isolateName,
+            debugName: hiveIsolateName,
             onConnect: onConnect,
             onExit: onExit,
           );
 
   @override
   void onConnect(SendPort send) =>
-      _isolateNameServer?.registerPortWithName(send, HiveIsolate.isolateName);
+      _isolateNameServer?.registerPortWithName(send, hiveIsolateName);
 
   @override
-  void onExit() =>
-      _isolateNameServer?.removePortNameMapping(HiveIsolate.isolateName);
+  void onExit() => _isolateNameServer?.removePortNameMapping(hiveIsolateName);
 
   @override
   set spawnHiveIsolate(Future<IsolateConnection> Function() spawnHiveIsolate) =>
@@ -50,21 +53,27 @@ class IsolatedHiveImpl extends TypeRegistryImpl
     String? path, {
     IsolateNameServer? isolateNameServer,
   }) async {
-    _isolateNameServer = isolateNameServer;
+    if (_connection == null) {
+      _isolateNameServer = isolateNameServer;
 
-    if (_isolateNameServer == null) {
-      debugPrint(HiveIsolate.noIsolateNameServerWarning);
+      if (_isolateNameServer == null) {
+        debugPrint(HiveIsolate.noIsolateNameServerWarning);
+      }
+
+      final send =
+          _isolateNameServer?.lookupPortByName(hiveIsolateName) as SendPort?;
+
+      final IsolateConnection connection;
+      if (send != null) {
+        connection = connectToIsolate(send);
+      } else {
+        connection = await _spawnHiveIsolate();
+      }
+      _connection = connection;
+
+      _hiveChannel = IsolateMethodChannel('hive', connection);
+      _boxChannel = IsolateMethodChannel('box', connection);
     }
-
-    final send = _isolateNameServer?.lookupPortByName(HiveIsolate.isolateName);
-    if (send != null) {
-      _connection = connectToIsolate(send);
-    } else {
-      _connection = await _spawnHiveIsolate();
-    }
-
-    _hiveChannel = IsolateMethodChannel('hive', _connection);
-    _boxChannel = IsolateMethodChannel('box', _connection);
 
     return _hiveChannel.invokeMethod('init', {'path': path});
   }
@@ -80,6 +89,13 @@ class IsolatedHiveImpl extends TypeRegistryImpl
     Uint8List? bytes,
     String? collection,
   ) async {
+    final connection = _connection;
+    if (connection == null) {
+      throw HiveError('IsolatedHive is not initialized');
+    }
+
+    typedMapOrIterableCheck<E>();
+
     name = name.toLowerCase();
     if (isBoxOpen(name)) {
       if (lazy) {
@@ -118,7 +134,7 @@ class IsolatedHiveImpl extends TypeRegistryImpl
             this,
             name,
             cipher,
-            _connection,
+            connection,
             _boxChannel,
           );
         } else {
@@ -127,7 +143,7 @@ class IsolatedHiveImpl extends TypeRegistryImpl
             this,
             name,
             cipher,
-            _connection,
+            connection,
             _boxChannel,
           );
         }
@@ -135,6 +151,9 @@ class IsolatedHiveImpl extends TypeRegistryImpl
         _boxes[name] = newBox;
 
         completer.complete();
+
+        HiveConnect.registerBox(newBox);
+
         return newBox;
       } catch (error, stackTrace) {
         completer.completeError(error, stackTrace);
@@ -231,10 +250,11 @@ class IsolatedHiveImpl extends TypeRegistryImpl
   }
 
   /// Not part of public API
-  void unregisterBox(String name) {
+  Future<void> unregisterBox(String name) async {
     name = name.toLowerCase();
-    _openingBoxes.remove(name);
+    unawaited(_openingBoxes.remove(name));
     _boxes.remove(name);
+    await _hiveChannel.invokeMethod('unregisterBox', {'name': name});
   }
 
   @override

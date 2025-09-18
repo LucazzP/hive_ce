@@ -2,11 +2,14 @@ import 'package:hive_ce/hive.dart';
 import 'package:hive_ce/src/backend/storage_backend.dart';
 import 'package:hive_ce/src/box/change_notifier.dart';
 import 'package:hive_ce/src/box/keystore.dart';
+import 'package:hive_ce/src/connect/hive_connect.dart';
+import 'package:hive_ce/src/connect/hive_connect_api.dart';
+import 'package:hive_ce/src/connect/inspectable_box.dart';
 import 'package:hive_ce/src/hive_impl.dart';
 import 'package:meta/meta.dart';
 
 /// Not part of public API
-abstract class BoxBaseImpl<E> implements BoxBase<E> {
+abstract class BoxBaseImpl<E> implements BoxBase<E>, InspectableBox {
   /// TODO: Document this!
   static BoxBase<E> nullImpl<E>() => _NullBoxBase<E>();
 
@@ -30,10 +33,10 @@ abstract class BoxBaseImpl<E> implements BoxBase<E> {
   @visibleForTesting
   late Keystore<E> keystore;
 
-  /// Whether to write frames to the disk verbatim
-  final bool verbatimFrames;
+  /// Whether this box is isolated
+  final bool isolated;
 
-  bool _open = true;
+  var _open = true;
 
   /// Not part of public API
   BoxBaseImpl(
@@ -42,7 +45,7 @@ abstract class BoxBaseImpl<E> implements BoxBase<E> {
     KeyComparator? keyComparator,
     this._compactionStrategy,
     this.backend, {
-    this.verbatimFrames = false,
+    this.isolated = false,
   }) {
     keystore = Keystore(this, ChangeNotifier(), keyComparator);
   }
@@ -100,7 +103,7 @@ abstract class BoxBaseImpl<E> implements BoxBase<E> {
       hive,
       keystore,
       lazy,
-      verbatimFrames: verbatimFrames,
+      isolated: isolated,
     );
   }
 
@@ -179,6 +182,7 @@ abstract class BoxBaseImpl<E> implements BoxBase<E> {
     _open = false;
     await keystore.close();
     hive.unregisterBox(name);
+    HiveConnect.unregisterBox(this);
 
     await backend.close();
   }
@@ -193,6 +197,13 @@ abstract class BoxBaseImpl<E> implements BoxBase<E> {
 
     await backend.deleteFromDisk();
   }
+
+  @override
+  TypeRegistry get typeRegistry => hive;
+
+  @override
+  Future<Iterable<InspectorFrame>> getFrames() async =>
+      keystore.frames.map(InspectorFrame.fromFrame);
 }
 
 class _NullBoxBase<E> implements BoxBase<E> {

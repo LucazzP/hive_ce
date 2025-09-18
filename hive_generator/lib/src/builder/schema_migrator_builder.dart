@@ -10,6 +10,7 @@ import 'package:hive_ce_generator/src/helper/helper.dart';
 import 'package:hive_ce_generator/src/model/hive_schema.dart';
 import 'package:source_gen/source_gen.dart';
 import 'package:source_helper/source_helper.dart';
+import 'package:meta/meta.dart';
 
 /// Generate a Hive schema from existing HiveType annotations
 class SchemaMigratorBuilder implements Builder {
@@ -59,7 +60,7 @@ class SchemaMigratorBuilder implements Builder {
       if (!await buildStep.resolver.isLibrary(input)) continue;
       final library = await buildStep.resolver.libraryFor(input);
       final hiveTypeElements = LibraryReader(library)
-          .annotatedWith(TypeChecker.fromRuntime(HiveType));
+          .annotatedWith(TypeChecker.typeNamed(HiveType, inPackage: 'hive_ce'));
       hiveTypes.addAll(hiveTypeElements);
     }
 
@@ -67,6 +68,7 @@ class SchemaMigratorBuilder implements Builder {
     for (final type in hiveTypes) {
       final cls = getClass(type.element);
       final className = cls.displayName;
+
       final library = type.element.library!;
       final typeId = readTypeId(type.annotation);
       final result = TypeAdapterGenerator.getAccessors(
@@ -89,12 +91,14 @@ class SchemaMigratorBuilder implements Builder {
         }
       }
 
-      final uri = library.source.uri;
+      final uri = library.uri;
       final isEnum = cls.thisType.isEnum;
       final constructor = getConstructor(cls);
       final accessors = [
-        ...cls.accessors,
-        ...cls.allSupertypes.expand((it) => it.accessors),
+        ...cls.getters,
+        ...cls.setters,
+        ...cls.allSupertypes
+            .expand((it) => [...it.element.getters, ...it.element.setters]),
       ];
       final info = _SchemaInfo(
         uri: uri,
@@ -170,11 +174,12 @@ part 'hive_adapters.g.dart';
 
     buildStep.forceWriteAsString(
       buildStep.asset('lib/hive/hive_adapters.g.yaml'),
-      HiveSchema(nextTypeId: nextTypeId, types: types).toString(),
+      writeSchema(HiveSchema(nextTypeId: nextTypeId, types: types)),
     );
   }
 }
 
+@immutable
 class _SchemaInfo {
   final Uri uri;
   final String className;
@@ -211,12 +216,12 @@ class _SchemaInfo {
       final publicFieldName =
           fieldName.startsWith('_') ? fieldName.substring(1) : fieldName;
 
-      final isInConstructor =
-          constructor.parameters.any((e) => e.displayName == publicFieldName);
+      final isInConstructor = constructor.formalParameters
+          .any((e) => e.displayName == publicFieldName);
       final publicAccessors =
           accessors.where((e) => e.displayName == publicFieldName).toList();
-      final hasPublicSetter = publicAccessors.any((e) => e.isSetter);
-      final hasPublicGetter = publicAccessors.any((e) => e.isGetter);
+      final hasPublicSetter = publicAccessors.any((e) => e is SetterElement);
+      final hasPublicGetter = publicAccessors.any((e) => e is GetterElement);
 
       if (!isInConstructor && !hasPublicSetter) {
         throw InvalidGenerationSourceError(

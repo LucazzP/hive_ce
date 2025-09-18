@@ -23,6 +23,7 @@ void expectGeneration({
   required Map<String, String> input,
   Map<String, Object> output = const {},
   String? throws,
+  bool debug = false,
 }) {
   final projectRoot = createTestProject(input);
   Process.runSync('dart', ['pub', 'get'], workingDirectory: projectRoot);
@@ -32,9 +33,15 @@ void expectGeneration({
     workingDirectory: projectRoot,
   );
 
+  if (debug) print(result.stdout);
+
   if (throws != null) {
     expect(result.exitCode, isNot(0));
-    expect(result.stdout, contains(throws));
+
+    final lines = result.stdout.split('\n');
+    for (final line in throws.split('\n')) {
+      expect(lines, contains(contains(line)));
+    }
     return;
   } else {
     expect(result.exitCode, 0);

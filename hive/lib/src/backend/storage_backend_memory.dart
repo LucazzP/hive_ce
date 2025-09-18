@@ -23,14 +23,14 @@ class StorageBackendMemory extends StorageBackend {
   String? get path => null;
 
   @override
-  bool supportsCompaction = false;
+  var supportsCompaction = false;
 
   @override
   Future<void> initialize(
     TypeRegistry registry,
     Keystore? keystore,
     bool lazy, {
-    bool verbatimFrames = false,
+    bool isolated = false,
   }) {
     final recoveryOffset = _frameHelper.framesFromBytes(
       _bytes!, // Initialized at constructor and nulled after initialization

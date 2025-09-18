@@ -1,8 +1,49 @@
-## 2.11.0-pre.2
+## 2.13.2
+
+- Removes the print statement from the inspector
+
+## 2.13.1
+
+- Fixes the first column header not showing in the inspector
+
+## 2.13.0
+
+- Adds the Hive CE Inspector DevTools extension
+
+## 2.12.0
+
+- Notify with the value of a deleted frame instead of `null`
+- Improves adapter of same type warning
+
+## 2.11.4
+
+- Handles exception thrown during compaction on some platforms
+- Updates documentation for `IsolatedHive`
+
+## 2.11.3
+
+- Prints warning when writing integers greater than 2^53
+
+## 2.11.2
+
+- Fixes web compatibility check
+- Fixes `deleteFromDisk` not completing on web
+
+## 2.11.1
+
+- Allows boxes of primitive iterables
+
+## 2.11.0
 
 - Isolate support through `IsolatedHive`
 - Warning messages for potentially unsafe isolate usage
 - Updates suggested placement of `GenerateAdapters` annotation
+- Fixes custom objects in `BoxCollection`. Custom objects must now be json serializable.
+- Adds much more information to the unknown typeId error message
+- Supports `freezed` default values
+- Enforces that boxes of type `Map` _must_ be `Map<dynamic, dynamic>`
+- Enforces that boxes of type `Iterable` _must_ be `Iterable<dynamic>`
+- Adds `reservedTypeIds` to `GenerateAdapters` annotation
 
 ## 2.10.1
 

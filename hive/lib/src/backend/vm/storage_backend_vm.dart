@@ -1,7 +1,9 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:hive_ce/hive.dart';
+import 'package:hive_ce/src/backend/lock_props.dart';
 import 'package:hive_ce/src/backend/storage_backend.dart';
 import 'package:hive_ce/src/backend/vm/read_write_sync.dart';
 import 'package:hive_ce/src/binary/binary_reader_impl.dart';
@@ -16,20 +18,19 @@ import 'package:meta/meta.dart';
 
 /// Storage backend for the Dart VM
 class StorageBackendVm extends StorageBackend {
-  /// Warning for lock file already existing
+  /// Warning for existing lock of unmatched isolation
   @visibleForTesting
-  static String lockFileExistsWarning(String fileName) => '''
+  static const unmatchedIsolationWarning = '''
 ⚠️ WARNING: HIVE MULTI-ISOLATE RISK DETECTED ⚠️
 
-A lock file already exists for this box ($fileName). This could mean another
-isolate has this box open. This can lead to DATA CORRUPTION as Hive boxes are
-not designed for concurrent access across isolates. Each isolate would maintain
-its own box cache, potentially causing data inconsistency and corruption.
+You are opening this box with Hive, but this box was previously opened with
+IsolatedHive. This can lead to DATA CORRUPTION as Hive boxes are not designed
+for concurrent access across isolates. Each isolate would maintain its own box
+cache, potentially causing data inconsistency and corruption.
 
 RECOMMENDED ACTIONS:
-- Use IsolatedHive to perform box operations
-- Close boxes after use
-
+- ALWAYS use IsolatedHive to perform box operations when working with multiple
+  isolates
 ''';
 
   final File _file;
@@ -58,13 +59,13 @@ RECOMMENDED ACTIONS:
 
   /// Not part of public API
   @visibleForTesting
-  int writeOffset = 0;
+  var writeOffset = 0;
 
   /// Not part of public API
   @visibleForTesting
   late final TypeRegistry registry;
 
-  bool _compactionScheduled = false;
+  var _compactionScheduled = false;
 
   /// Not part of public API
   StorageBackendVm(
@@ -89,7 +90,7 @@ RECOMMENDED ACTIONS:
   String get path => _file.path;
 
   @override
-  bool supportsCompaction = true;
+  var supportsCompaction = true;
 
   /// Not part of public API
   Future open() async {
@@ -103,19 +104,25 @@ RECOMMENDED ACTIONS:
     TypeRegistry registry,
     Keystore keystore,
     bool lazy, {
-    bool verbatimFrames = false,
+    bool isolated = false,
   }) async {
     this.registry = registry;
 
     if (_lockFile.existsSync()) {
-      debugPrint(
-        lockFileExistsWarning(
-          _lockFile.path.split(Platform.pathSeparator).last,
-        ),
-      );
+      late final LockProps props;
+      try {
+        props = LockProps.fromJson(jsonDecode(_lockFile.readAsStringSync()));
+      } catch (_) {
+        props = LockProps();
+      }
+      if (props.isolated && !isolated) {
+        debugPrint(unmatchedIsolationWarning);
+      }
     }
 
     lockRaf = await _lockFile.open(mode: FileMode.write);
+    lockRaf.writeStringSync(jsonEncode(LockProps(isolated: isolated)));
+    lockRaf.flushSync();
     await lockRaf.lock();
 
     int recoveryOffset;
@@ -125,7 +132,7 @@ RECOMMENDED ACTIONS:
         keystore,
         registry,
         _cipher,
-        verbatim: verbatimFrames,
+        verbatim: isolated,
       );
     } else {
       recoveryOffset = await _frameHelper.keysFromFile(path, keystore, _cipher);
@@ -231,8 +238,17 @@ RECOMMENDED ACTIONS:
 
       await readRaf.close();
       await writeRaf.close();
-      await compactFile.rename(path);
-      await open();
+
+      try {
+        // This can fail on some systems
+        await compactFile.rename(path);
+      } catch (e) {
+        await compactFile.delete();
+        rethrow;
+      } finally {
+        await open();
+        _compactionScheduled = false;
+      }
 
       var offset = 0;
       for (final frame in sortedFrames) {
@@ -240,7 +256,6 @@ RECOMMENDED ACTIONS:
         frame.offset = offset;
         offset += frame.length!;
       }
-      _compactionScheduled = false;
     });
   }
 

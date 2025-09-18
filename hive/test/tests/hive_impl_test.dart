@@ -13,7 +13,7 @@ import 'package:test/test.dart';
 import 'common.dart';
 
 class _TestAdapter extends TypeAdapter<int> {
-  _TestAdapter([this.typeId = 0]);
+  const _TestAdapter([this.typeId = 0]);
 
   @override
   final int typeId;
@@ -94,6 +94,54 @@ void main() {
           ]);
 
           expect(box1 == box2, true);
+        });
+      });
+
+      group('typed map or iterable', () {
+        test('throws AssertionError if map or iterable is typed', () async {
+          final hive = await initHive();
+
+          expect(
+            hive.openBox<Map<String, dynamic>>('mapbox'),
+            throwsA(isA<AssertionError>()),
+          );
+          expect(hive.openBox<Map>('mapbox'), completes);
+
+          Future<void> openBox<T>() async {
+            final box = await hive.openBox<T>('iterablebox');
+            await box.close();
+          }
+
+          expect(
+            hive.openBox<Iterable<DateTime>>('iterablebox'),
+            throwsA(isA<AssertionError>()),
+          );
+          await expectLater(openBox<Iterable>(), completes);
+          await expectLater(openBox<Iterable<int>>(), completes);
+          await expectLater(openBox<Iterable<double>>(), completes);
+          await expectLater(openBox<Iterable<bool>>(), completes);
+          await expectLater(openBox<Iterable<String>>(), completes);
+
+          expect(
+            hive.openBox<List<DateTime>>('listbox'),
+            throwsA(isA<AssertionError>()),
+          );
+
+          await expectLater(openBox<List>(), completes);
+          await expectLater(openBox<List<int>>(), completes);
+          await expectLater(openBox<List<double>>(), completes);
+          await expectLater(openBox<List<bool>>(), completes);
+          await expectLater(openBox<List<String>>(), completes);
+
+          expect(
+            hive.openBox<Set<DateTime>>('setbox'),
+            throwsA(isA<AssertionError>()),
+          );
+          await expectLater(openBox<Set>(), completes);
+          await expectLater(openBox<Set<int>>(), completes);
+          await expectLater(openBox<Set<double>>(), completes);
+          await expectLater(openBox<Set<bool>>(), completes);
+          await expectLater(openBox<Set<String>>(), completes);
         });
       });
     });

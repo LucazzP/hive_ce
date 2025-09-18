@@ -17,7 +17,7 @@ class BinaryReaderImpl extends BinaryReader {
   final TypeRegistryImpl _typeRegistry;
 
   int _bufferLimit;
-  int _offset = 0;
+  var _offset = 0;
 
   /// Not part of public API
   BinaryReaderImpl(this._buffer, TypeRegistry typeRegistry, [int? bufferLength])
@@ -165,7 +165,7 @@ class BinaryReaderImpl extends BinaryReader {
     length ??= readUint32();
     _requireBytes(length * 8);
     final byteData = _byteData;
-    final list = List<double>.filled(length, 0.0, growable: true);
+    final list = List<double>.filled(length, 0, growable: true);
     for (var i = 0; i < length; i++) {
       list[i] = byteData.getFloat64(_offset, Endian.little);
       _offset += 8;
@@ -311,6 +311,14 @@ class BinaryReaderImpl extends BinaryReader {
     return frame;
   }
 
+  /// Read [length] bytes from the buffer
+  Uint8List readBytes(int length) {
+    _requireBytes(length);
+    final bytes = _buffer.sublist(_offset, _offset + length);
+    _offset += length;
+    return bytes;
+  }
+
   @override
   dynamic read([int? typeId]) {
     typeId ??= readTypeId();
@@ -352,8 +360,22 @@ class BinaryReaderImpl extends BinaryReader {
       default:
         final resolved = _typeRegistry.findAdapterForTypeId(typeId);
         if (resolved == null) {
-          throw HiveError('Cannot read, unknown typeId: $typeId. '
-              'Did you forget to register an adapter?');
+          throw HiveError('''
+Cannot read, unknown typeId: $typeId. Did you forget to register an adapter?
+
+If you recently migrated to the GenerateAdapters annotation, make sure to follow
+the migration guide:
+https://github.com/IO-Design-Team/hive_ce/blob/main/hive/MIGRATION.md#generate-adapters
+
+If this type ID has never existed in your project, this is box corruption.
+There is no way to automatically recover from this. If you are using Hive in
+multiple isolates, replace all Hive calls in your project with calls to
+IsolatedHive to prevent this in the future. Examples of isolate usage include:
+- Flutter multi-window
+- flutter_workmanager
+- background_fetch
+- Push notification processing (firebase_cloud_messaging, etc.)
+''');
         }
         return resolved.adapter.read(this);
     }

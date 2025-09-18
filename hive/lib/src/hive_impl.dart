@@ -10,11 +10,13 @@ import 'package:hive_ce/src/box/box_impl.dart';
 import 'package:hive_ce/src/box/default_compaction_strategy.dart';
 import 'package:hive_ce/src/box/default_key_comparator.dart';
 import 'package:hive_ce/src/box/lazy_box_impl.dart';
+import 'package:hive_ce/src/connect/hive_connect.dart';
 import 'package:hive_ce/src/isolate/isolate_debug_name/isolate_debug_name.dart';
-import 'package:hive_ce/src/isolate/isolated_hive_impl/hive_isolate.dart';
+import 'package:hive_ce/src/isolate/isolated_hive_impl/hive_isolate_name.dart';
 import 'package:hive_ce/src/registry/type_registry_impl.dart';
 import 'package:hive_ce/src/util/debug_utils.dart';
 import 'package:hive_ce/src/util/extensions.dart';
+import 'package:hive_ce/src/util/type_utils.dart';
 import 'package:meta/meta.dart';
 
 import 'package:hive_ce/src/backend/storage_backend.dart';
@@ -42,13 +44,13 @@ RECOMMENDED ACTIONS:
   final _boxes = HashMap<String, BoxBaseImpl>();
   final _openingBoxes = HashMap<String, Future>();
   BackendManagerInterface? _managerOverride;
-  final Random _secureRandom = Random.secure();
+  final _secureRandom = Random.secure();
 
-  /// Whether to write frames to the disk verbatim
-  bool _verbatimFrames = false;
+  /// Whether this Hive instance is isolated
+  var _isolated = false;
 
-  /// Set [_verbatimFrames] to true
-  void useVerbatimFrames() => _verbatimFrames = true;
+  /// Set [_isolated] to true
+  void setIsolated() => _isolated = true;
 
   /// Not part of public API
   @visibleForTesting
@@ -65,7 +67,7 @@ RECOMMENDED ACTIONS:
     HiveStorageBackendPreference backendPreference =
         HiveStorageBackendPreference.native,
   }) {
-    if (!{'main', HiveIsolate.isolateName}.contains(isolateDebugName)) {
+    if (!{'main', hiveIsolateName}.contains(isolateDebugName)) {
       debugPrint(unsafeIsolateWarning);
     }
     homePath = path;
@@ -88,6 +90,8 @@ RECOMMENDED ACTIONS:
       name.length <= 255 && name.isAscii,
       'Box names need to be ASCII Strings with a max length of 255.',
     );
+    typedMapOrIterableCheck<E>();
+
     name = name.toLowerCase();
     if (isBoxOpen(name)) {
       if (lazy) {
@@ -130,7 +134,7 @@ RECOMMENDED ACTIONS:
             comparator,
             compaction,
             backend,
-            verbatimFrames: _verbatimFrames,
+            isolated: _isolated,
           );
         } else {
           newBox = BoxImpl<E>(
@@ -139,7 +143,7 @@ RECOMMENDED ACTIONS:
             comparator,
             compaction,
             backend,
-            verbatimFrames: _verbatimFrames,
+            isolated: _isolated,
           );
         }
 
@@ -147,6 +151,9 @@ RECOMMENDED ACTIONS:
         _boxes[name] = newBox;
 
         completer.complete();
+
+        if (!_isolated) HiveConnect.registerBox(newBox);
+
         return newBox;
       } catch (error, stackTrace) {
         unawaited(newBox?.close());

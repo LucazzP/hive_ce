@@ -54,7 +54,7 @@ class StorageBackendJs extends StorageBackend {
   String? get path => null;
 
   @override
-  bool supportsCompaction = false;
+  var supportsCompaction = false;
 
   bool _isEncoded(Uint8List bytes) {
     return bytes.length >= _bytePrefix.length &&
@@ -136,22 +136,30 @@ class StorageBackendJs extends StorageBackend {
 
   /// Not part of public API
   @visibleForTesting
-  Future<List<Object?>> getKeys({bool cursor = false}) async {
+  Future<List<Object>> getKeys({bool cursor = false}) async {
     final store = getStore(false);
 
     if (store.has('getAllKeys') && !cursor) {
       final result = await getStore(false).getAllKeys(null).asFuture<JSArray>();
-      return result.toDart.map((e) {
-        if (e.isA<JSNumber>()) {
-          e as JSNumber;
-          return e.toDartInt;
-        } else if (e.isA<JSString>()) {
-          e as JSString;
-          return e.toDart;
-        }
-      }).toList();
+      return result.toDart
+          .map((e) {
+            if (e.isA<JSNumber>()) {
+              e as JSNumber;
+              return e.toDartInt;
+            } else if (e.isA<JSString>()) {
+              e as JSString;
+              return e.toDart;
+            }
+          })
+          .whereType<Object>()
+          .toList();
     } else {
-      return store.iterate().map((e) => e.key.dartify()).toList();
+      return store
+          .iterate()
+          .map((e) => e.key.dartify())
+          .where((e) => e is Object)
+          .cast<Object>()
+          .toList();
     }
   }
 
@@ -173,7 +181,7 @@ class StorageBackendJs extends StorageBackend {
     TypeRegistry registry,
     Keystore keystore,
     bool lazy, {
-    bool verbatimFrames = false,
+    bool isolated = false,
   }) async {
     _registry = registry;
     final keys = await getKeys();
@@ -235,6 +243,7 @@ class StorageBackendJs extends StorageBackend {
 
     // directly deleting the entire DB if a non-collection Box
     if (_db.objectStoreNames.length == 1) {
+      _db.close();
       await indexDB.deleteDatabase(_db.name).asFuture();
     } else {
       final request = indexDB.open(_db.name, 1);
@@ -246,6 +255,7 @@ class StorageBackendJs extends StorageBackend {
       }.toJS;
       final db = await request.asFuture<IDBDatabase>();
       if (db.objectStoreNames.length == 0) {
+        _db.close();
         await indexDB.deleteDatabase(_db.name).asFuture();
       }
     }

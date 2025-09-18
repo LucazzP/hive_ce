@@ -5,15 +5,23 @@ import 'package:analyzer/dart/element/element.dart';
 import 'package:build/build.dart';
 import 'package:collection/collection.dart';
 import 'package:hive_ce/hive.dart';
+import 'package:hive_ce_generator/src/model/hive_schema.dart';
 import 'package:source_gen/source_gen.dart';
 import 'package:path/path.dart' as path;
+import 'package:meta/meta.dart';
+import 'package:yaml_writer/yaml_writer.dart';
 
-final _hiveFieldChecker = const TypeChecker.fromRuntime(HiveField);
+final _hiveFieldChecker =
+    const TypeChecker.typeNamed(HiveField, inPackage: 'hive_ce');
+final _freezedDefaultChecker = const TypeChecker.fromUrl(
+  'package:freezed_annotation/freezed_annotation.dart#Default',
+);
 
 /// TODO: Document this!
+@immutable
 class HiveFieldInfo {
   /// TODO: Document this!
-  HiveFieldInfo(this.index, this.defaultValue);
+  const HiveFieldInfo(this.index, this.defaultValue);
 
   /// TODO: Document this!
   final int index;
@@ -34,9 +42,19 @@ HiveFieldInfo? getHiveFieldAnn(Element? element) {
   );
 }
 
+/// Get the string representation of the freezed default value
+DartObject? getFreezedDefault(Element? element) {
+  if (element == null) return null;
+  final obj = _freezedDefaultChecker.firstAnnotationOfExact(element);
+  if (obj == null) return null;
+
+  // Get the source code of the default value
+  return obj.getField('defaultValue');
+}
+
 /// Get a classes default constructor or throw
 ConstructorElement getConstructor(InterfaceElement cls) {
-  final constr = cls.constructors.firstWhereOrNull((it) => it.name.isEmpty);
+  final constr = cls.constructors.firstWhereOrNull((it) => it.name == 'new');
   if (constr == null) {
     throw 'Provide an unnamed constructor.';
   }
@@ -96,4 +114,12 @@ extension BuildStepExtension on BuildStep {
       ..createSync(recursive: true)
       ..writeAsStringSync(content);
   }
+}
+
+/// Write a [HiveSchema] to a string
+String writeSchema(HiveSchema schema) {
+  final yaml = YamlWriter().write(schema.toJson());
+  return '''
+${HiveSchema.comment}
+$yaml''';
 }
