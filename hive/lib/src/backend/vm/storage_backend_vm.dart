@@ -269,7 +269,7 @@ RECOMMENDED ACTIONS:
         await compactFile.rename(path);
       } catch (e) {
         await compactFile.delete();
-        rethrow;
+        // rethrow;
       } finally {
         await open();
         _compactionScheduled = false;
