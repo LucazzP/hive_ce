@@ -162,7 +162,12 @@ RECOMMENDED ACTIONS:
 
       if (readFrame == null) {
         throw HiveError(
-          'Could not read value from box. Maybe your box is corrupted.',
+          'Could not read value from box at offset ${frame.offset} '
+          '(length: ${frame.length}, key: ${frame.key}). '
+          'This can happen if: (1) the box file was corrupted, '
+          '(2) a compaction operation failed mid-way, or '
+          '(3) the box was accessed concurrently from multiple isolates '
+          'without using IsolatedHive. Read ${bytes.length} bytes.',
         );
       }
 
@@ -264,22 +269,28 @@ RECOMMENDED ACTIONS:
       await readRaf.close();
       await writeRaf.close();
 
+      var compactionSucceeded = false;
       try {
-        // This can fail on some systems
+        // This can fail on some systems (e.g., Windows file locking)
         await compactFile.rename(path);
+        compactionSucceeded = true;
       } catch (e) {
+        // Rename failed - delete the compact file and keep original
         await compactFile.delete();
-        // rethrow;
       } finally {
         await open();
         _compactionScheduled = false;
       }
 
-      var offset = 0;
-      for (final frame in sortedFrames) {
-        if (frame.offset == -1) continue;
-        frame.offset = offset;
-        offset += frame.length!;
+      // Only update frame offsets if compaction actually succeeded
+      // Otherwise, the original file is still in place with original offsets
+      if (compactionSucceeded) {
+        var offset = 0;
+        for (final frame in sortedFrames) {
+          if (frame.offset == -1) continue;
+          frame.offset = offset;
+          offset += frame.length!;
+        }
       }
     });
   }
