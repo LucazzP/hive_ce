@@ -124,8 +124,7 @@ class StorageBackendVm extends StorageBackend {
         verbatim: isolated,
       );
     } else {
-      recoveryOffset =
-          await _frameHelper.keysFromFile(path, keystore, _cipher, _keyCrc);
+      recoveryOffset = await _frameHelper.keysFromFile(path, keystore, _cipher, _keyCrc);
     }
 
     if (recoveryOffset != -1) {
@@ -225,7 +224,7 @@ class StorageBackendVm extends StorageBackend {
     if (_compactionScheduled) return Future.value();
     _compactionScheduled = true;
 
-    return _sync.syncReadWrite(() async {
+    return _sync.syncReadWrite(timeout: Duration(minutes: 5), () async {
       await readRaf.setPosition(0);
       final reader = BufferedFileReader(readRaf);
 
