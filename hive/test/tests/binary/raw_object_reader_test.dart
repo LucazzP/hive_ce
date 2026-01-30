@@ -1,6 +1,6 @@
 import 'dart:typed_data';
 
-import 'package:hive_ce/hive.dart';
+import 'package:hive_ce/hive_ce.dart';
 import 'package:hive_ce/src/binary/raw_object_reader.dart';
 import 'package:hive_ce/src/binary/raw_object_writer.dart';
 import 'package:hive_ce/src/registry/type_registry_impl.dart';
@@ -59,7 +59,7 @@ void main() {
             'field1': HiveSchemaField(index: 0),
             'field2': HiveSchemaField(index: 1),
           },
-        )
+        ),
       };
 
       final testObject = TestObject('test', 123);
@@ -99,7 +99,7 @@ void main() {
             'value1': HiveSchemaField(index: 0),
             'value2': HiveSchemaField(index: 1),
           },
-        )
+        ),
       };
 
       final bw = RawObjectWriter(typeRegistry);

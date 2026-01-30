@@ -1,5 +1,6 @@
 import 'package:devtools_app_shared/ui.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:hive_ce_inspector/model/box_data.dart';
 import 'package:hive_ce_inspector/model/hive_internal.dart';
 import 'package:hive_ce_inspector/service/connect_client.dart';
@@ -79,7 +80,9 @@ class _BoxViewState extends State<BoxView> {
         ),
       ),
       child: DefaultTextStyle(
-        style: textTheme.bodyMedium!.copyWith(overflow: TextOverflow.ellipsis),
+        style:
+            textTheme.bodyMedium?.copyWith(overflow: TextOverflow.ellipsis) ??
+            const TextStyle(),
         child: DataTableView(
           key: ValueKey(widget.data.name),
           data: stack.last.value,
@@ -117,10 +120,20 @@ class DataTableView extends StatefulWidget {
 class _DataTableViewState extends State<DataTableView> {
   final searchController = TextEditingController();
 
+  late List<KeyedObject> filteredData = widget.data;
+
   @override
   void dispose() {
     searchController.dispose();
     super.dispose();
+  }
+
+  @override
+  void didUpdateWidget(DataTableView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.data != widget.data) {
+      filter(searchController.text);
+    }
   }
 
   @override
@@ -133,27 +146,13 @@ class _DataTableViewState extends State<DataTableView> {
       columnCount = 2;
     }
 
-    final query = searchController.text;
-    final List<KeyedObject> filteredData;
-    if (query.isEmpty) {
-      filteredData = widget.data;
-    } else {
-      filteredData = widget.data
-          .where(
-            (e) =>
-                e.key.toString().toLowerCase().contains(query.toLowerCase()) ||
-                e.value.toString().toLowerCase().contains(query.toLowerCase()),
-          )
-          .toList();
-    }
-
     final largeDataset = widget.data.length > 100000;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(8),
           child: Column(
             spacing: 8,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -164,8 +163,8 @@ class _DataTableViewState extends State<DataTableView> {
                   controller: searchController,
                   hintText: 'Search',
                   prefixIcon: const Icon(Icons.search),
-                  onChanged: !largeDataset ? (_) => setState(() {}) : null,
-                  onSubmitted: largeDataset ? (_) => setState(() {}) : null,
+                  onChanged: !largeDataset ? filter : null,
+                  onSubmitted: largeDataset ? filter : null,
                 ),
               ),
               if (largeDataset) const Text('Submit to search'),
@@ -173,7 +172,7 @@ class _DataTableViewState extends State<DataTableView> {
           ),
         ),
         filteredData.isEmpty
-            ? const Expanded(child: Center(child: Text('No search results')))
+            ? const Expanded(child: Center(child: Text('No data to display')))
             : Expanded(
                 child: TableView.builder(
                   rowCount: filteredData.length + 1,
@@ -219,6 +218,7 @@ class _DataTableViewState extends State<DataTableView> {
                     }
 
                     final object = filteredData[rowIndex];
+                    final query = searchController.text;
 
                     if (column == 0) {
                       final keyString = object.key.toString();
@@ -247,7 +247,10 @@ class _DataTableViewState extends State<DataTableView> {
                       cellContent = const Text('[Loading...]');
                     } else if (fieldValue is Uint8List) {
                       cellText = fieldValue.toString();
-                      cellContent = const Text('[Bytes]');
+                      cellContent = CopyableItem(
+                        item: fieldValue,
+                        child: const Text('[Bytes]'),
+                      );
                     } else if (fieldValue is Iterable) {
                       final list = fieldValue.toList();
                       if (list.isEmpty) {
@@ -273,10 +276,16 @@ class _DataTableViewState extends State<DataTableView> {
                       );
                     } else if (fieldValue is RawEnum) {
                       cellText = '${fieldValue.name}.${fieldValue.value}';
-                      cellContent = Text(cellText);
+                      cellContent = CopyableItem(
+                        item: fieldValue,
+                        child: Text(cellText),
+                      );
                     } else {
                       cellText = fieldValue.toString();
-                      cellContent = Text(cellText);
+                      cellContent = CopyableItem(
+                        item: fieldValue,
+                        child: Text(cellText),
+                      );
                     }
 
                     return TableViewCell(
@@ -296,6 +305,23 @@ class _DataTableViewState extends State<DataTableView> {
               ),
       ],
     );
+  }
+
+  void filter(String query) {
+    final List<KeyedObject> newData;
+    if (query.isEmpty) {
+      newData = widget.data;
+    } else {
+      newData = widget.data
+          .where(
+            (e) =>
+                e.key.toString().toLowerCase().contains(query.toLowerCase()) ||
+                e.value.toString().toLowerCase().contains(query.toLowerCase()),
+          )
+          .toList();
+    }
+
+    setState(() => filteredData = newData);
   }
 }
 
@@ -331,6 +357,28 @@ class _FrameLoaderState extends State<FrameLoader> {
   @override
   Widget build(BuildContext context) {
     return widget.child;
+  }
+}
+
+class CopyableItem extends StatelessWidget {
+  final Object? item;
+  final Widget child;
+
+  const CopyableItem({super.key, required this.item, required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    final messenger = ScaffoldMessenger.of(context);
+
+    return InkWell(
+      onTap: () {
+        Clipboard.setData(ClipboardData(text: item.toString()));
+        messenger.showSnackBar(
+          const SnackBar(content: Text('Copied to clipboard')),
+        );
+      },
+      child: child,
+    );
   }
 }
 

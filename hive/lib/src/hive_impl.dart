@@ -3,7 +3,7 @@ import 'dart:collection';
 import 'dart:math';
 import 'dart:typed_data';
 
-import 'package:hive_ce/hive.dart';
+import 'package:hive_ce/hive_ce.dart';
 import 'package:hive_ce/src/backend/storage_backend_memory.dart';
 import 'package:hive_ce/src/box/box_base_impl.dart';
 import 'package:hive_ce/src/box/box_impl.dart';
@@ -14,8 +14,8 @@ import 'package:hive_ce/src/connect/hive_connect.dart';
 import 'package:hive_ce/src/isolate/isolate_debug_name/isolate_debug_name.dart';
 import 'package:hive_ce/src/isolate/isolated_hive_impl/hive_isolate_name.dart';
 import 'package:hive_ce/src/registry/type_registry_impl.dart';
-import 'package:hive_ce/src/util/debug_utils.dart';
 import 'package:hive_ce/src/util/extensions.dart';
+import 'package:hive_ce/src/util/logger.dart';
 import 'package:hive_ce/src/util/type_utils.dart';
 import 'package:meta/meta.dart';
 
@@ -23,21 +23,6 @@ import 'package:hive_ce/src/backend/storage_backend.dart';
 
 /// Not part of public API
 class HiveImpl extends TypeRegistryImpl implements HiveInterface {
-  /// Warning message printed when accessing Hive from an unsafe isolate
-  @visibleForTesting
-  static final unsafeIsolateWarning = '''
-⚠️ WARNING: HIVE MULTI-ISOLATE RISK DETECTED ⚠️
-
-Accessing Hive from an unsafe isolate (current isolate: "$isolateDebugName")
-This can lead to DATA CORRUPTION as Hive boxes are not designed for concurrent
-access across isolates. Each isolate would maintain its own box cache,
-potentially causing data inconsistency and corruption.
-
-RECOMMENDED ACTIONS:
-- Use IsolatedHive instead
-
-''';
-
   static final BackendManagerInterface _defaultBackendManager =
       BackendManager.select();
 
@@ -67,8 +52,11 @@ RECOMMENDED ACTIONS:
     HiveStorageBackendPreference backendPreference =
         HiveStorageBackendPreference.native,
   }) {
-    if (!{'main', hiveIsolateName}.contains(isolateDebugName)) {
-      debugPrint(unsafeIsolateWarning);
+    if (Logger.unsafeIsolateWarning &&
+        !{'main', hiveIsolateName}.contains(isolateDebugName) &&
+        // Do not print this warning if this code is running in a test
+        !isolateDebugName.startsWith('test_suite')) {
+      Logger.w(HiveWarning.unsafeIsolate);
     }
     homePath = path;
     _managerOverride = BackendManager.select(backendPreference);
@@ -78,6 +66,7 @@ RECOMMENDED ACTIONS:
     String name,
     bool lazy,
     HiveCipher? cipher,
+    int? keyCrc,
     KeyComparator comparator,
     CompactionStrategy compaction,
     bool recovery,
@@ -116,13 +105,14 @@ RECOMMENDED ACTIONS:
       try {
         StorageBackend backend;
         if (bytes != null) {
-          backend = StorageBackendMemory(bytes, cipher);
+          backend = StorageBackendMemory(bytes, cipher, keyCrc);
         } else {
           backend = await _manager.open(
             name,
             path ?? homePath,
             recovery,
             cipher,
+            keyCrc,
             collection,
           );
         }
@@ -156,11 +146,11 @@ RECOMMENDED ACTIONS:
 
         return newBox;
       } catch (error, stackTrace) {
-        unawaited(newBox?.close());
+        newBox?.close().ignore();
         completer.completeError(error, stackTrace);
         rethrow;
       } finally {
-        unawaited(_openingBoxes.remove(name));
+        _openingBoxes.remove(name)?.ignore();
       }
     }
   }
@@ -169,6 +159,7 @@ RECOMMENDED ACTIONS:
   Future<Box<E>> openBox<E>(
     String name, {
     HiveCipher? encryptionCipher,
+    int? keyCrc,
     KeyComparator keyComparator = defaultKeyComparator,
     CompactionStrategy compactionStrategy = defaultCompactionStrategy,
     bool crashRecovery = true,
@@ -184,6 +175,7 @@ RECOMMENDED ACTIONS:
       name,
       false,
       encryptionCipher,
+      keyCrc,
       keyComparator,
       compactionStrategy,
       crashRecovery,
@@ -197,6 +189,7 @@ RECOMMENDED ACTIONS:
   Future<LazyBox<E>> openLazyBox<E>(
     String name, {
     HiveCipher? encryptionCipher,
+    int? keyCrc,
     KeyComparator keyComparator = defaultKeyComparator,
     CompactionStrategy compactionStrategy = defaultCompactionStrategy,
     bool crashRecovery = true,
@@ -211,6 +204,7 @@ RECOMMENDED ACTIONS:
       name,
       true,
       encryptionCipher,
+      keyCrc,
       keyComparator,
       compactionStrategy,
       crashRecovery,

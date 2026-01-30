@@ -3,7 +3,7 @@ import 'dart:convert';
 
 import 'package:analyzer/dart/element/element.dart';
 import 'package:build/build.dart';
-import 'package:hive_ce/hive.dart';
+import 'package:hive_ce/hive_ce.dart';
 import 'package:hive_ce_generator/src/helper/helper.dart';
 import 'package:hive_ce_generator/src/model/hive_schema.dart';
 import 'package:hive_ce_generator/src/model/revived_generate_adapter.dart';
@@ -88,6 +88,7 @@ class AdaptersGenerator extends GeneratorForAnnotation<GenerateAdapters> {
         library: library,
         typeId: schemaType.typeId,
         schema: schemaType,
+        ignoredFields: spec.ignoredFields,
       );
 
       content.write(result.content);
