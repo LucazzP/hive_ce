@@ -20,7 +20,7 @@ class ReadWriteSync {
     await previousTask;
     final resultFuture = task().timeout(timeout);
     // ignore: prefer_async_await
-    resultFuture.then(completer.complete).catchError(completer.completeError).ignore();
+    resultFuture.then((_) => completer.complete()).catchError((_) => completer.complete()).ignore();
     return resultFuture;
   }
 
@@ -34,7 +34,7 @@ class ReadWriteSync {
     await previousTask;
     final resultFuture = task().timeout(timeout);
     // ignore: prefer_async_await
-    resultFuture.then(completer.complete).catchError(completer.completeError).ignore();
+    resultFuture.then((_) => completer.complete()).catchError((_) => completer.complete()).ignore();
     return resultFuture;
   }
 
@@ -52,7 +52,7 @@ class ReadWriteSync {
     await previousWriteTask;
     final resultFuture = task().timeout(timeout);
     // ignore: prefer_async_await
-    resultFuture.then(completer.complete).catchError(completer.completeError).ignore();
+    resultFuture.then((_) => completer.complete()).catchError((_) => completer.complete()).ignore();
     return resultFuture;
   }
 }

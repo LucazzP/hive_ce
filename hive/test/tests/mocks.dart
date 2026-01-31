@@ -32,7 +32,16 @@ class MockHiveList extends Mock implements HiveList {}
 
 class MockHiveListImpl extends Mock implements HiveListImpl {}
 
-class MockRandomAccessFile extends Mock implements RandomAccessFile {}
+class MockRandomAccessFile extends Mock implements RandomAccessFile {
+  @override
+  Future<RandomAccessFile> setPosition(int position) {
+    final result = super.noSuchMethod(Invocation.method(#setPosition, [position]));
+    if (result == null) {
+      return Future.value(this);
+    }
+    return result as Future<RandomAccessFile>;
+  }
+}
 
 class MockBinaryReader extends Mock implements BinaryReader {}
 
